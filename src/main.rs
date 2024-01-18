@@ -28,9 +28,11 @@ impl EventHandler for Handler {
                     let data = include_str!("data.txt");
                     let mut line_number = 0;
                     let mut in_list = false;
+                    // If the name is in the list
                     for line in data.lines() {
                         line_number += 1;
-                        if line.contains(&name) {
+                        // Fuzzy match entire line
+                        if line.to_lowercase() == name.to_lowercase() {
                             in_list = true;
                             let user_id = env::var("USER_ID")
                                 .expect("Failed to get USER_ID from the environment variables");
