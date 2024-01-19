@@ -14,13 +14,15 @@ struct Handler;
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         if msg.content.starts_with("!") {
-            let (command, content) = msg.content.split_at(2);
-            if command == "!e" {
+            if msg.content == "!e" {
+                // Get message to echo
+                let content = msg.content[3..].to_string();
                 if let Err(why) = msg.channel_id.say(&ctx.http, content).await {
                     println!("Error sending message: {:?}", why);
                 }
             }
-            if command == "!count" {
+            if msg.content == "!count" {
+                println!("Counting messages");
                 // If user's ID is user_id
                 let user_id = env::var("USER_ID");
                 if let Some(user_id) = user_id.ok() {
