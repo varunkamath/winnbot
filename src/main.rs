@@ -44,6 +44,8 @@ impl EventHandler for Handler {
                                 .messages(&ctx.http, builder.before(last_id))
                                 .await
                                 .unwrap();
+                            // Print current count
+                            println!("{}", count);
                         }
                         // Send the count and time taken
                         if let Err(why) = msg
