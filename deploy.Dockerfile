@@ -1,9 +1,12 @@
-FROM rust:1.75
-
-EXPOSE 8080
-RUN mkdir -p /usr/src/winnbot
-WORKDIR /usr/src/winnbot
+FROM rust:1.75 as builder
+WORKDIR /usr/src/winn
 COPY . .
 RUN cargo install --path .
 
-CMD [ "winn" ]
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/src/winn/env_vars /usr/local/bin/env_vars
+COPY --from=builder /usr/local/cargo/bin/winn /usr/local/bin/winn
+COPY entrypoint.sh /app/entrypoint.sh
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["winn"]

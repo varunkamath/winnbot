@@ -13,55 +13,44 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
+        if msg.author.bot {
+            return;
+        }
         if msg.content.starts_with("!") {
-            // Echo command
             if msg.content.starts_with("!e") {
                 println!("Echoing message");
-                // Get the message after the command
                 let content = msg.content[3..].trim();
-                // Send the message
                 if let Err(why) = msg.channel_id.say(&ctx.http, content).await {
                     println!("Error sending message: {:?}", why);
                 }
             }
-            // Count command
             if msg.content == "!count" {
                 println!("Counting messages");
-                // If user's ID is user_id
                 let user_id = env::var("USER_ID");
                 if let Some(user_id) = user_id.ok() {
                     if msg.author.id == user_id.parse::<u64>().unwrap() {
-                        // Count all the messages in the channel, and send the count and time taken
                         let mut count = 0;
                         let time = std::time::Instant::now();
-                        // Get channel ID from the message
                         let channel_id = msg.channel_id;
-                        // Use the GetMessages builder to get the messages (up to 100 at a time)
                         let builder = GetMessages::new().before(msg.id).limit(100);
                         let mut messages = channel_id.messages(&ctx.http, builder).await.unwrap();
-                        // Loop until there are no more messages
                         while messages.len() > 0 {
-                            // Add the number of messages to the count
                             count += messages.len();
-                            // Get the ID of the last message
                             let last_id = messages.last().unwrap().id;
-                            // Get the next 100 messages
                             messages = channel_id
                                 .messages(&ctx.http, builder.before(last_id))
                                 .await
                                 .unwrap();
-                            // Print current count
                             println!("{}", count);
                         }
-                        // Send the count and time taken
                         if let Err(why) = msg
                             .channel_id
                             .say(
                                 &ctx.http,
                                 format!(
-                                    "There are {} messages in this channel. It took {} seconds to count them.",
+                                    "Counted {} messages in this channel, time elapsed: {}",
                                     count,
-                                    time.elapsed().as_secs()
+                                    time.elapsed().as_secs_f32()
                                 ),
                             )
                             .await

@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   winn:
-    image: varunkamath14/winn:latest
+    image: varunkamath14/winn:light
     container_name: winn
     network_mode: host
     platform: linux/amd64
