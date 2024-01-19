@@ -5,4 +5,5 @@ RUN mkdir -p /usr/src/winnbot
 WORKDIR /usr/src/winnbot
 COPY . .
 RUN cargo install --path .
+
 CMD [ "winn" ]
