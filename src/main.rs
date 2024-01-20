@@ -18,9 +18,9 @@ impl EventHandler for Handler {
                 println!("Sending help message");
                 let embed = CreateEmbed::new()
                 .title("Help")
-                .description("Commands:\n!help - Show this message\n!echo <message> - Echo a message\n!count - Count the number of messages in this channel\n\n[<:github:1198311705596399712> Source](https://github.com/varunkamath14/winnbot)");
+                .description("Commands:\n!help - Show this message\n!echo <message> - Echo a message\n!count - Count the number of messages in this channel\n\n[<:github:1198311705596399712> Source](https://github.com/varunkamath/winnbot)");
                 // .footer(CreateEmbedFooter::new("by @telemtry"));
-                let builder = CreateMessage::new().content("").tts(true).embed(embed);
+                let builder = CreateMessage::new().content("").tts(false).embed(embed);
                 if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
                     println!("Error sending message: {:?}", why);
                 }
@@ -68,7 +68,7 @@ impl EventHandler for Handler {
                         let embed = CreateEmbed::new()
                             .title("⚠️ Unauthorized")
                             .description("You are not authorized to use this command");
-                        let builder = CreateMessage::new().content("").tts(true).embed(embed);
+                        let builder = CreateMessage::new().content("").tts(false).embed(embed);
                         if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
                             println!("Error sending message: {:?}", why);
                         }
@@ -79,7 +79,7 @@ impl EventHandler for Handler {
                 let embed = CreateEmbed::new()
                     .title("Unknown command")
                     .description("Use !help to see a list of commands");
-                let builder = CreateMessage::new().content("").tts(true).embed(embed);
+                let builder = CreateMessage::new().content("").tts(false).embed(embed);
                 if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
                     println!("Error sending message: {:?}", why);
                 }
