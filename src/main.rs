@@ -1,8 +1,7 @@
-// A simple Discord bot to help with the Winn Discord server.
 use dotenv::dotenv;
 use serenity::{
     async_trait,
-    builder::GetMessages,
+    builder::{CreateEmbed, CreateEmbedFooter, CreateMessage, GetMessages},
     model::{channel::Message, gateway::Ready, id::UserId},
     prelude::*,
 };
@@ -17,6 +16,17 @@ impl EventHandler for Handler {
             return;
         }
         if msg.content.starts_with("!") {
+            if msg.content == "!help" || msg.content == "!h" {
+                println!("Sending help message");
+                let embed = CreateEmbed::new()
+                .title("Help")
+                .description("Commands:\n!help - Show this message\n!echo <message> - Echo a message\n!count - Count the number of messages in this channel")
+                .footer(CreateEmbedFooter::new("Source code: [GitHub](https://github.com/varunkamath14/winn)"));
+                let builder = CreateMessage::new().content("").tts(true).embed(embed);
+                if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
+                    println!("Error sending message: {:?}", why);
+                }
+            }
             if msg.content.starts_with("!e") {
                 println!("Echoing message");
                 let content = msg.content[3..].trim();
@@ -57,43 +67,60 @@ impl EventHandler for Handler {
                         {
                             println!("Error sending message: {:?}", why);
                         }
+                    } else {
+                        println!("User is not authorized!");
+                        let embed = CreateEmbed::new()
+                            .title("⚠️ Unauthorized")
+                            .description("You are not authorized to use this command");
+                        let builder = CreateMessage::new().content("").tts(true).embed(embed);
+                        if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
+                            println!("Error sending message: {:?}", why);
+                        }
                     }
                 }
             } else {
-                let mudae_id = env::var("MUDAE_ID")
-                    .expect("Failed to get MUDAE_ID from the environment variables");
-                if msg.author.id == mudae_id.parse::<u64>().unwrap() {
-                    if let Some(embed) = msg.embeds.first() {
-                        let name = embed.author.as_ref().unwrap().name.clone();
-                        let data = include_str!("data.txt");
-                        let mut line_number = 0;
-                        let mut in_list = false;
-                        // If the name is in the list
-                        for line in data.lines() {
-                            line_number += 1;
-                            // Fuzzy match entire line
-                            if line.to_lowercase() == name.to_lowercase() {
-                                in_list = true;
-                                let user_id = env::var("USER_ID")
-                                    .expect("Failed to get USER_ID from the environment variables");
-                                let user = UserId::new(user_id.parse::<u64>().unwrap());
-                                if let Err(why) = user
-                                    .create_dm_channel(&ctx.http)
-                                    .await
-                                    .unwrap()
-                                    .say(
-                                        &ctx.http,
-                                        format!("{} is number {} in the list", name, line_number),
-                                    )
-                                    .await
-                                {
-                                    println!("Error sending message: {:?}", why);
-                                }
+                println!("Unknown command");
+                let embed = CreateEmbed::new()
+                    .title("Unknown command")
+                    .description("Use !help to see a list of commands");
+                let builder = CreateMessage::new().content("").tts(true).embed(embed);
+                if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
+                    println!("Error sending message: {:?}", why);
+                }
+            }
+            let mudae_id = env::var("MUDAE_ID")
+                .expect("Failed to get MUDAE_ID from the environment variables");
+            if msg.author.id == mudae_id.parse::<u64>().unwrap() {
+                if let Some(embed) = msg.embeds.first() {
+                    let name = embed.author.as_ref().unwrap().name.clone();
+                    let data = include_str!("data.txt");
+                    let mut line_number = 0;
+                    let mut in_list = false;
+                    // If the name is in the list
+                    for line in data.lines() {
+                        line_number += 1;
+                        // Fuzzy match entire line
+                        if line.to_lowercase() == name.to_lowercase() {
+                            in_list = true;
+                            let user_id = env::var("USER_ID")
+                                .expect("Failed to get USER_ID from the environment variables");
+                            let user = UserId::new(user_id.parse::<u64>().unwrap());
+                            if let Err(why) = user
+                                .create_dm_channel(&ctx.http)
+                                .await
+                                .unwrap()
+                                .say(
+                                    &ctx.http,
+                                    format!("{} is number {} in the list", name, line_number),
+                                )
+                                .await
+                            {
+                                println!("Error sending message: {:?}", why);
                             }
                         }
-                        if !in_list {
-                            println!("{} is not in the list", name);
-                        }
+                    }
+                    if !in_list {
+                        println!("{} is not in the list", name);
                     }
                 }
             }
