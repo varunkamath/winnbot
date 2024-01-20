@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use serenity::{
     async_trait,
-    builder::{CreateEmbed, CreateEmbedFooter, CreateMessage, GetMessages},
+    builder::{CreateEmbed, CreateMessage, GetMessages},
     model::{channel::Message, gateway::Ready, id::UserId},
     prelude::*,
 };
@@ -18,8 +18,8 @@ impl EventHandler for Handler {
                 println!("Sending help message");
                 let embed = CreateEmbed::new()
                 .title("Help")
-                .description("Commands:\n!help - Show this message\n!echo <message> - Echo a message\n!count - Count the number of messages in this channel")
-                .footer(CreateEmbedFooter::new("Source code: https://github.com/varunkamath14/winn"));
+                .description("Commands:\n!help - Show this message\n!echo <message> - Echo a message\n!count - Count the number of messages in this channel\n\n[<:github:1198311705596399712> Source](https://github.com/varunkamath14/winnbot)");
+                // .footer(CreateEmbedFooter::new("by @telemtry"));
                 let builder = CreateMessage::new().content("").tts(true).embed(embed);
                 if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
                     println!("Error sending message: {:?}", why);
