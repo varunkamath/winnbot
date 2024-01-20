@@ -12,9 +12,7 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        if msg.author.bot {
-            return;
-        }
+        // TODO: If the message is sent by this bot's user ID, ignore it
         if msg.content.starts_with("!") {
             if msg.content == "!help" || msg.content == "!h" {
                 println!("Sending help message");
