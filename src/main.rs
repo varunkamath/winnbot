@@ -24,15 +24,13 @@ impl EventHandler for Handler {
                 if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
                     println!("Error sending message: {:?}", why);
                 }
-            }
-            if msg.content.starts_with("!e") {
+            } else if msg.content.starts_with("!e") {
                 println!("Echoing message");
                 let content = msg.content[3..].trim();
                 if let Err(why) = msg.channel_id.say(&ctx.http, content).await {
                     println!("Error sending message: {:?}", why);
                 }
-            }
-            if msg.content == "!count" {
+            } else if msg.content == "!count" {
                 println!("Counting messages");
                 let user_id = env::var("USER_ID");
                 if let Some(user_id) = user_id.ok() {
