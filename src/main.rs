@@ -175,7 +175,6 @@ impl EventHandler for Handler {
                         let user_id = env::var("USER_ID")
                             .expect("Failed to get USER_ID from the environment variables");
                         let user = UserId::new(user_id.parse::<u64>().unwrap());
-                        // Send message to user and link to message of the waifu
                         if let Err(why) = user
                             .create_dm_channel(&ctx.http)
                             .await
