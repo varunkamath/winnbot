@@ -1,4 +1,6 @@
+use async_rusqlite::Connection;
 use dotenv::dotenv;
+use rusqlite::params;
 use serenity::{
     async_trait,
     builder::{CreateEmbed, CreateMessage, GetMessages},
@@ -73,6 +75,69 @@ impl EventHandler for Handler {
                             println!("Error sending message: {:?}", why);
                         }
                     }
+                }
+            } else if msg.content == "!archive" {
+                println!("Archiving messages");
+                let conn = Connection::open("discord.db").await.unwrap();
+                // Create table if it doesn't exist with columns id, content, author, channel, timestamp
+                let _ = conn
+                    .call(|conn| {
+                        conn.execute(
+                            "CREATE TABLE IF NOT EXISTS messages (
+                            id TEXT PRIMARY KEY,
+                            content TEXT NOT NULL,
+                            author TEXT NOT NULL,
+                            channel TEXT NOT NULL,
+                            timestamp TEXT NOT NULL
+                        )",
+                            params![],
+                        )
+                    })
+                    .await;
+                // Loop through all messages in the channel and add them to the database
+                let mut count = 0;
+                let time = std::time::Instant::now();
+                let channel_id = msg.channel_id;
+                let builder = GetMessages::new().before(msg.id).limit(100);
+                let mut messages = channel_id.messages(&ctx.http, builder).await.unwrap();
+                while messages.len() > 0 {
+                    let last_id = messages.last().unwrap().id.clone();
+                    for message in messages {
+                        let id = message.id.to_string();
+                        // Save last message ID
+                        let content = message.content;
+                        let author = message.author.name;
+                        let channel = message.channel_id.name(&ctx.http).await.unwrap();
+                        let timestamp = message.timestamp.to_string();
+                        let _ = conn.call(move |conn| {
+                            conn.execute(
+                                "INSERT INTO messages (id, content, author, channel, timestamp) VALUES (?1, ?2, ?3, ?4, ?5)",
+                                params![id, content, author, channel, timestamp],
+                            )
+                        })
+                        .await;
+                        count += 1;
+                    }
+                    // let last_id = messages.last().unwrap().id;
+                    messages = channel_id
+                        .messages(&ctx.http, builder.before(last_id))
+                        .await
+                        .unwrap();
+                    println!("{}", count);
+                }
+                if let Err(why) = msg
+                    .channel_id
+                    .say(
+                        &ctx.http,
+                        format!(
+                            "Archived {} messages in this channel, time elapsed: {}",
+                            count,
+                            time.elapsed().as_secs_f32()
+                        ),
+                    )
+                    .await
+                {
+                    println!("Error sending message: {:?}", why);
                 }
             } else {
                 println!("Unknown command");
