@@ -78,66 +78,76 @@ impl EventHandler for Handler {
                 }
             } else if msg.content == "!archive" {
                 println!("Archiving messages");
-                let conn = Connection::open("discord.db").await.unwrap();
-                // Create table if it doesn't exist with columns id, content, author, channel, timestamp
-                let _ = conn
-                    .call(|conn| {
-                        conn.execute(
-                            "CREATE TABLE IF NOT EXISTS messages (
-                            id TEXT PRIMARY KEY,
-                            content TEXT NOT NULL,
-                            author TEXT NOT NULL,
-                            channel TEXT NOT NULL,
-                            timestamp TEXT NOT NULL
-                        )",
-                            params![],
-                        )
-                    })
-                    .await;
-                // Loop through all messages in the channel and add them to the database
-                let mut count = 0;
-                let time = std::time::Instant::now();
-                let channel_id = msg.channel_id;
-                let builder = GetMessages::new().before(msg.id).limit(100);
-                let mut messages = channel_id.messages(&ctx.http, builder).await.unwrap();
-                while messages.len() > 0 {
-                    let last_id = messages.last().unwrap().id.clone();
-                    for message in messages {
-                        let id = message.id.to_string();
-                        // Save last message ID
-                        let content = message.content;
-                        let author = message.author.name;
-                        let channel = message.channel_id.name(&ctx.http).await.unwrap();
-                        let timestamp = message.timestamp.to_string();
-                        let _ = conn.call(move |conn| {
-                            conn.execute(
-                                "INSERT INTO messages (id, content, author, channel, timestamp) VALUES (?1, ?2, ?3, ?4, ?5)",
-                                params![id, content, author, channel, timestamp],
+                let user_id = env::var("USER_ID");
+                if let Some(user_id) = user_id.ok() {
+                    if msg.author.id == user_id.parse::<u64>().unwrap() {
+                        let conn = Connection::open("discord.db").await.unwrap();
+                        let _ = conn
+                            .call(|conn| {
+                                conn.execute(
+                                    "CREATE TABLE IF NOT EXISTS messages (
+                                id TEXT PRIMARY KEY,
+                                content TEXT NOT NULL,
+                                author TEXT NOT NULL,
+                                channel TEXT NOT NULL,
+                                timestamp TEXT NOT NULL
+                            )",
+                                    params![],
+                                )
+                            })
+                            .await;
+                        let mut count = 0;
+                        let time = std::time::Instant::now();
+                        let channel_id = msg.channel_id;
+                        let builder = GetMessages::new().before(msg.id).limit(100);
+                        let mut messages = channel_id.messages(&ctx.http, builder).await.unwrap();
+                        while messages.len() > 0 {
+                            let last_id = messages.last().unwrap().id.clone();
+                            for message in messages {
+                                let id = message.id.to_string();
+                                let content = message.content;
+                                let author = message.author.name;
+                                let channel = message.channel_id.name(&ctx.http).await.unwrap();
+                                let timestamp = message.timestamp.to_string();
+                                let _ = conn.call(move |conn| {
+                                conn.execute(
+                                    "INSERT INTO messages (id, content, author, channel, timestamp) VALUES (?1, ?2, ?3, ?4, ?5)",
+                                    params![id, content, author, channel, timestamp],
+                                )
+                            })
+                            .await;
+                                count += 1;
+                            }
+                            messages = channel_id
+                                .messages(&ctx.http, builder.before(last_id))
+                                .await
+                                .unwrap();
+                            println!("{}", count);
+                        }
+                        if let Err(why) = msg
+                            .channel_id
+                            .say(
+                                &ctx.http,
+                                format!(
+                                    "Archived {} messages in this channel, time elapsed: {}",
+                                    count,
+                                    time.elapsed().as_secs_f32()
+                                ),
                             )
-                        })
-                        .await;
-                        count += 1;
+                            .await
+                        {
+                            println!("Error sending message: {:?}", why);
+                        }
+                    } else {
+                        println!("User is not authorized!");
+                        let embed = CreateEmbed::new()
+                            .title("⚠️ Unauthorized")
+                            .description("You are not authorized to use this command");
+                        let builder = CreateMessage::new().content("").tts(false).embed(embed);
+                        if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
+                            println!("Error sending message: {:?}", why);
+                        }
                     }
-                    // let last_id = messages.last().unwrap().id;
-                    messages = channel_id
-                        .messages(&ctx.http, builder.before(last_id))
-                        .await
-                        .unwrap();
-                    println!("{}", count);
-                }
-                if let Err(why) = msg
-                    .channel_id
-                    .say(
-                        &ctx.http,
-                        format!(
-                            "Archived {} messages in this channel, time elapsed: {}",
-                            count,
-                            time.elapsed().as_secs_f32()
-                        ),
-                    )
-                    .await
-                {
-                    println!("Error sending message: {:?}", why);
                 }
             } else {
                 println!("Unknown command");
@@ -158,27 +168,43 @@ impl EventHandler for Handler {
                 let data = include_str!("data.txt");
                 let mut line_number = 0;
                 let mut in_list = false;
-                // If the name is in the list
                 for line in data.lines() {
                     line_number += 1;
-                    // Fuzzy match entire line
                     if line.to_lowercase() == name.to_lowercase() {
                         in_list = true;
                         let user_id = env::var("USER_ID")
                             .expect("Failed to get USER_ID from the environment variables");
                         let user = UserId::new(user_id.parse::<u64>().unwrap());
+                        // Send message to user and link to message of the waifu
                         if let Err(why) = user
                             .create_dm_channel(&ctx.http)
                             .await
                             .unwrap()
                             .say(
                                 &ctx.http,
-                                format!("{} is number {} in the list", name, line_number),
+                                format!(
+                                    "{} is number {} in the list\n[Message]({})",
+                                    name,
+                                    line_number,
+                                    msg.link()
+                                ),
                             )
                             .await
                         {
                             println!("Error sending message: {:?}", why);
                         }
+                        // if let Err(why) = user
+                        //     .create_dm_channel(&ctx.http)
+                        //     .await
+                        //     .unwrap()
+                        //     .say(
+                        //         &ctx.http,
+                        //         format!("{} is number {} in the list", name, line_number),
+                        //     )
+                        //     .await
+                        // {
+                        //     println!("Error sending message: {:?}", why);
+                        // }
                     }
                 }
                 if !in_list {
