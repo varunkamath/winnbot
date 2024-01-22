@@ -193,18 +193,6 @@ impl EventHandler for Handler {
                         {
                             println!("Error sending message: {:?}", why);
                         }
-                        // if let Err(why) = user
-                        //     .create_dm_channel(&ctx.http)
-                        //     .await
-                        //     .unwrap()
-                        //     .say(
-                        //         &ctx.http,
-                        //         format!("{} is number {} in the list", name, line_number),
-                        //     )
-                        //     .await
-                        // {
-                        //     println!("Error sending message: {:?}", why);
-                        // }
                     }
                 }
                 if !in_list {
