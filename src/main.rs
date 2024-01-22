@@ -138,6 +138,8 @@ impl EventHandler for Handler {
                         {
                             println!("Error sending message: {:?}", why);
                         }
+                    } else if msg.content == "!chesspuzzle" || msg.content == "!cp" {
+                        // TODO: Add chess puzzle
                     } else {
                         println!("User is not authorized!");
                         let embed = CreateEmbed::new()
