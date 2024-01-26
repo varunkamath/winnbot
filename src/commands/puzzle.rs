@@ -68,10 +68,11 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
     let attachment = CreateAttachment::path("./puzzle.png").await;
     let embed = CreateEmbed::new()
         .title("Puzzle")
-        // .description(format!("{} to move.\nSolution: {}", whose_turn, solution))
-        .description(format!("{} to move.", whose_turn))
+        .description(format!(
+            "{} to move. Input a move in UCI format (example: b4b5, d7e8, etc.)",
+            whose_turn
+        ))
         .attachment("puzzle.png");
-    // Image as attachment using ChannelId::send_files
     let builder = CreateMessage::new().content("").tts(false).embed(embed);
     let _ = msg
         .channel_id
@@ -79,16 +80,13 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
         .await
         .unwrap();
     let board = shakmaty::Board::from_ascii_board_fen(board_fen.as_bytes()).unwrap();
-    // Print the board
     println!("{:?}", board.occupied());
-    // Convert to Setup
     let mut setup = Setup::empty();
     setup.board = board;
     setup.turn = board_turn;
     let mode = shakmaty::CastlingMode::Standard;
     let mut pos = Chess::from_setup(setup, mode).unwrap();
     let legals = pos.legal_moves();
-    // Convert legals to UCI (e4e5, etc.). Legals looks like this: [Normal { role: Pawn, from: C4, capture: None, to: C3, promotion: None }, Normal { role: Pawn, from: H4, capture: None, to: H3, promotion: None }, Normal { role: Bishop, from: B5, capture: None, to: A4, promotion: None }, Normal { role: Bishop, from: B5, capture: None, to: C6, promotion: None }, Normal { role: Bishop, from: B5, capture: None, to: D7, promotion: None }, Normal { role: Bishop, from: B5, capture: None, to: E8, promotion: None }, Normal { role: King, from: H7, capture: None, to: H6, promotion: None }, Normal { role: King, from: H7, capture: None, to: G8, promotion: None }, Normal { role: King, from: H7, capture: None, to: H8, promotion: None }]
     let mut uci_legals = Vec::new();
     let mut san_legals = Vec::new();
     let mut san_strings = Vec::new();
@@ -111,18 +109,13 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
     for san_legal in &mut san_legals {
         san_strings.push(san_legal.to_string());
     }
-    // Print the legals
     println!("Legal moves (UCI): {:?}", uci_legals);
     println!("Legal moves (SAN): {:?}", san_strings);
-    // Start listening for a response from the user with a timeout of 30 seconds
     let mut correct = false;
     let mut timeout = false;
     let original_solution = solution.clone();
-    // Convert solution to list of strings
     let mut solution = solution.split(' ').collect::<Vec<&str>>();
-    // Get first move in solution
     let mut next_move = solution[0];
-    // Get time now
     let time = std::time::Instant::now();
     println!("Solution: {}", solution.join(" "));
     while correct == false && timeout == false {
@@ -159,10 +152,8 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
             if let Err(why) = message.react(&ctx.http, '✅').await {
                 println!("Error reacting to message: {:?}", why);
             }
-            // Remove the move from the solution
             next_move = solution[0];
             solution = solution[1..].to_vec();
-            // Check if the solution is empty
             if solution.len() == 0 {
                 correct = true;
                 let attachment = CreateAttachment::path("./puzzle.png").await;
@@ -181,31 +172,23 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
             } else {
                 println!("Solution before opponent move: {}", solution.join(" "));
                 println!("Your move: {}", next_move);
-                // Make the next move, get the FEN, and update the board
                 let uci_move: uci::Uci = next_move.parse().unwrap();
                 let m = uci_move.to_move(&pos).unwrap();
                 pos.play_unchecked(&m);
-                // Make the next move in solution
                 next_move = solution[0];
                 solution = solution[1..].to_vec();
                 println!("Solution after opponent move: {}", solution.join(" "));
                 println!("Opponent move: {}", next_move);
                 let uci_move: uci::Uci = next_move.parse().expect("Invalid move");
-                // Print uci_move
                 println!("UCI move: {}", uci_move);
                 let m = uci_move.to_move(&pos).expect("Invalid move");
                 pos.play_unchecked(&m);
                 next_move = solution[0];
-                // Remove the move from the solution
-                // solution = solution[1..].to_vec();
                 let board_fen = Board::board_fen(&pos.board(), pos.promoted());
-                // Print board FEN
                 println!("{}", board_fen.to_string());
                 let board = shakmaty::Board::from_ascii_board_fen(board_fen.to_string().as_bytes())
                     .unwrap();
-                // Print the board
                 println!("{:?}", board.occupied());
-                // Convert to Setup
                 setup = Setup::empty();
                 setup.board = board;
                 setup.turn = board_turn;
@@ -224,9 +207,7 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
                     *uci_legal = uci_legal.replace("Q", "");
                     *uci_legal = uci_legal.replace("K", "");
                 }
-                // Print the legals
                 println!("Legal moves: {:?}", uci_legals);
-                // Send the new puzzle
                 let url = format!("https://fen2image.chessvision.ai/{}", board_fen);
                 let response = reqwest::get(&url).await.unwrap();
                 let image = response.bytes().await.unwrap();
@@ -240,7 +221,6 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
                     // .description(format!("{} to move.\nSolution: {}", whose_turn, solution))
                     .description(format!("{} to move.", whose_turn))
                     .attachment("puzzle.png");
-                // Image as attachment using ChannelId::send_files
                 let builder = CreateMessage::new().content("").tts(false).embed(embed);
                 let _ = msg
                     .channel_id
@@ -257,6 +237,5 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
         }
     }
     println!("{}", timeout);
-    // Delete ./puzzle.png
     std::fs::remove_file("./puzzle.png").unwrap();
 }
