@@ -1,3 +1,4 @@
+// Desc: Unknown command handling
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
     model::channel::Message,

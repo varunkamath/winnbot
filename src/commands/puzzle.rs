@@ -1,3 +1,4 @@
+// Desc: Play a random chess puzzle
 use image::GenericImageView;
 use pgnparse::parser::*;
 use rand::seq::SliceRandom;

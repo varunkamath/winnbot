@@ -1,3 +1,4 @@
+// Desc: Archive messages in a channel
 use async_rusqlite::Connection;
 use rusqlite::params;
 use serenity::{
