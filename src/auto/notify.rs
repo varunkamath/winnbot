@@ -10,7 +10,7 @@ pub async fn notify(msg: &Message, ctx: &Context) {
     if msg.author.id == mudae_id.parse::<u64>().unwrap() {
         if let Some(embed) = msg.embeds.first() {
             let name = embed.author.as_ref().unwrap().name.clone();
-            let data = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/data.txt"));
+            let data = include_str!("data/data.txt");
             let mut line_number = 0;
             let mut in_list = false;
             for line in data.lines() {

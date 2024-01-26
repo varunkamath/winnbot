@@ -9,12 +9,9 @@ use serenity::{
     prelude::*,
 };
 use shakmaty::*;
-use std::env;
-
-static PUZZLES: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/puzzles.csv"));
 
 pub async fn puzzle(msg: &Message, ctx: &Context) {
-    let file_path = std::path::Path::new(PUZZLES);
+    let file_path = std::path::Path::new("puzzle.png");
     if file_path.exists() {
         println!("Puzzle already in progress");
         let embed = CreateEmbed::new()
@@ -27,7 +24,7 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
         return;
     }
     let puzzle_player_id = msg.author.id.to_string();
-    let file_contents = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/puzzles.csv"));
+    let file_contents = include_str!("data/puzzles.csv");
     let lines = file_contents.lines().collect::<Vec<&str>>();
     let line = lines.choose(&mut rand::thread_rng()).unwrap();
     println!("Sending puzzle {}", line);
@@ -65,7 +62,7 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
     let (width, _) = image.dimensions();
     let image = image.crop_imm(0, 0, width, width);
     image.save("puzzle.png").unwrap();
-    let attachment = CreateAttachment::path("./puzzle.png").await;
+    let attachment = CreateAttachment::path("puzzle.png").await;
     let embed = CreateEmbed::new()
         .title("Puzzle")
         .description(format!(
