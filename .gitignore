@@ -20,3 +20,5 @@ env_vars
 # macOS garbage, large data files
 .DS_Store
 *.csv
+*.db
+data.txt
