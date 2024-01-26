@@ -26,7 +26,7 @@ impl EventHandler for Handler {
                 content if content.starts_with("!clear") || content.starts_with("!c") => {
                     clear::clear(&msg, &ctx).await
                 }
-                "!puzzle" | "!p" => puzzle::puzzle(&msg, &ctx).await,
+                "!puzzle" | "!p" | "!solution" | "!sol" => puzzle::puzzle(&msg, &ctx).await,
                 _ => unknown::unknown(&msg, &ctx).await,
             }
         } else {

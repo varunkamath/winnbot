@@ -4,19 +4,47 @@ use rand::seq::SliceRandom;
 use reqwest::{get, Response};
 use serde_json::Value;
 use serenity::{
-    builder::{CreateAttachment, CreateEmbed, CreateMessage, GetMessages},
+    builder::{CreateAttachment, CreateEmbed, CreateEmbedFooter, CreateMessage, GetMessages},
     model::channel::Message,
     prelude::*,
 };
 use shakmaty::*;
 
 pub async fn puzzle(msg: &Message, ctx: &Context) {
+    if msg.content == "!sol" || msg.content == "!solution" {
+        let file_path = std::path::Path::new("puzzle.png");
+        if file_path.exists() {
+            println!("Sending solution");
+            let solution = std::env::var("SOLUTION").unwrap();
+            let puzzle_id = std::env::var("PUZZLE_ID").unwrap();
+            let embed = CreateEmbed::new().title("Solution").description(format!(
+                "Solution: {}\n\n[lichess](https://lichess.com/training/{})",
+                solution, puzzle_id
+            ));
+            let builder = CreateMessage::new().content("").tts(false).embed(embed);
+            let _ = msg.channel_id.send_message(&ctx.http, builder).await;
+            std::fs::remove_file("puzzle.png").unwrap();
+            std::env::set_var("PUZZLE_ID", "");
+            std::env::set_var("SOLUTION", "");
+            return;
+        } else {
+            println!("No puzzle in progress");
+            let embed = CreateEmbed::new()
+                .title("No puzzle in progress")
+                .description("Use !puzzle to start a new puzzle");
+            let builder = CreateMessage::new().content("").tts(false).embed(embed);
+            if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
+                println!("Error sending message: {:?}", why);
+            }
+            return;
+        }
+    }
     let file_path = std::path::Path::new("puzzle.png");
     if file_path.exists() {
         println!("Puzzle already in progress");
         let embed = CreateEmbed::new()
             .title("Puzzle already in progress")
-            .description("Solve the puzzle or wait for the timeout (30s)");
+            .description("Solve the puzzle, send \"!sol\", or wait for the timeout (90s)");
         let builder = CreateMessage::new().content("").tts(false).embed(embed);
         if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
             println!("Error sending message: {:?}", why);
@@ -27,6 +55,7 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
     let file_contents = include_str!("data/puzzles.csv");
     let lines = file_contents.lines().collect::<Vec<&str>>();
     let line = lines.choose(&mut rand::thread_rng()).unwrap();
+    std::env::set_var("PUZZLE_ID", line);
     println!("Sending puzzle {}", line);
     let url = format!("https://lichess.org/api/puzzle/{}", line);
     let json: Value = get(&url).await.unwrap().json().await.unwrap();
@@ -63,11 +92,13 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
     let image = image.crop_imm(0, 0, width, width);
     image.save("puzzle.png").unwrap();
     let attachment = CreateAttachment::path("puzzle.png").await;
+    let footer = CreateEmbedFooter::new(format!("Puzzle ID: {}", line));
     let embed = CreateEmbed::new()
         .title("Puzzle")
+        .footer(footer)
         .description(format!(
-            "{} to move. Input a move in UCI format (example: b4b5, d7e8, etc.)",
-            whose_turn
+            "{} to move. Input a move in UCI format (example: b4b5, d7e8, etc.)\n\n[lichess](https://lichess.com/training/{})",
+            whose_turn, line
         ))
         .attachment("puzzle.png");
     let builder = CreateMessage::new().content("").tts(false).embed(embed);
@@ -115,6 +146,7 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
     let mut next_move = solution[0];
     let time = std::time::Instant::now();
     println!("Solution: {}", solution.join(" "));
+    std::env::set_var("SOLUTION", solution.join(" "));
     while correct == false && timeout == false {
         println!("{}", time.elapsed().as_secs_f32());
         if time.elapsed().as_secs_f32() > 90.0 {

@@ -6,7 +6,7 @@ RUN cargo install --path .
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y build-essential ca-certificates && update-ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/src/winn/env_vars /usr/local/bin/env_vars
-COPY --from=builder /usr/src/winn/puzzles.csv /app/puzzles.csv
+# COPY --from=builder /usr/src/winn/src/commands/data/puzzles.csv /app/puzzles.csv
 COPY --from=builder /usr/local/cargo/bin/winn /usr/local/bin/winn
 COPY entrypoint.sh /app/entrypoint.sh
 ENTRYPOINT ["/app/entrypoint.sh"]
