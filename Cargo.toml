@@ -1,6 +1,6 @@
 [package]
 name = "winn"
-version = "0.1.0"
+version = "0.1.5"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -12,3 +12,9 @@ tokio = { version = "1.35", features = ["rt-multi-thread"] }
 rusqlite = "0.29"  # Check for the latest version
 serde = { version = "1.0", features = ["derive"] }
 async-rusqlite = "0.4.0"
+rand = "0.8.5"
+pgnparse = "0.1.15"
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
+image = "0.24"
+shakmaty = "0.26.0"
