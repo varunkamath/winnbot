@@ -1,3 +1,4 @@
+// Desc: Clear messages from a channel
 use serenity::{
     builder::{CreateEmbed, CreateMessage, GetMessages},
     model::channel::Message,
