@@ -12,35 +12,36 @@ use serenity::{
 use shakmaty::*;
 
 pub async fn puzzle(msg: &Message, ctx: &Context) {
-    let mut sol = false;
+    let sol = false;
     if msg.content == "!sol" || msg.content == "!solution" {
-        let file_path = std::path::Path::new("puzzle.png");
-        if file_path.exists() {
-            sol = true;
-            println!("Sending solution");
-            let solution = std::env::var("SOLUTION").unwrap();
-            let puzzle_id = std::env::var("PUZZLE_ID").unwrap();
-            let embed = CreateEmbed::new().title("Solution").description(format!(
-                "Solution: {}\n\n[lichess](https://lichess.com/training/{})",
-                solution, puzzle_id
-            ));
-            let builder = CreateMessage::new().content("").tts(false).embed(embed);
-            let _ = msg.channel_id.send_message(&ctx.http, builder).await;
-            std::fs::remove_file("puzzle.png").unwrap();
-            std::env::set_var("PUZZLE_ID", "");
-            std::env::set_var("SOLUTION", "");
-            return;
-        } else {
-            println!("No puzzle in progress");
-            let embed = CreateEmbed::new()
-                .title("No puzzle in progress")
-                .description("Use !puzzle to start a new puzzle");
-            let builder = CreateMessage::new().content("").tts(false).embed(embed);
-            if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
-                println!("Error sending message: {:?}", why);
-            }
-            return;
-        }
+        println!("Solution temporarily disabled");
+        // let file_path = std::path::Path::new("puzzle.png");
+        // if file_path.exists() {
+        //     sol = true;
+        //     println!("Sending solution");
+        //     let solution = std::env::var("SOLUTION").unwrap();
+        //     let puzzle_id = std::env::var("PUZZLE_ID").unwrap();
+        //     let embed = CreateEmbed::new().title("Solution").description(format!(
+        //         "Solution: {}\n\n[lichess](https://lichess.com/training/{})",
+        //         solution, puzzle_id
+        //     ));
+        //     let builder = CreateMessage::new().content("").tts(false).embed(embed);
+        //     let _ = msg.channel_id.send_message(&ctx.http, builder).await;
+        //     std::fs::remove_file("puzzle.png").unwrap();
+        //     std::env::set_var("PUZZLE_ID", "");
+        //     std::env::set_var("SOLUTION", "");
+        //     return;
+        // } else {
+        //     println!("No puzzle in progress");
+        //     let embed = CreateEmbed::new()
+        //         .title("No puzzle in progress")
+        //         .description("Use !puzzle to start a new puzzle");
+        //     let builder = CreateMessage::new().content("").tts(false).embed(embed);
+        //     if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
+        //         println!("Error sending message: {:?}", why);
+        //     }
+        //     return;
+        // }
     }
     let file_path = std::path::Path::new("puzzle.png");
     if file_path.exists() {
