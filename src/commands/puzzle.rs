@@ -145,7 +145,8 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
     let original_solution = solution.clone();
     let mut solution = solution.split(' ').collect::<Vec<&str>>();
     let mut next_move = solution[0];
-    let time = std::time::Instant::now();
+    // let time = std::time::Instant::now();
+    let time = tokio::time::Instant::now();
     println!("Solution: {}", solution.join(" "));
     std::env::set_var("SOLUTION", solution.join(" "));
     while correct == false && timeout == false {
