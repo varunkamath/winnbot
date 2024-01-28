@@ -23,6 +23,7 @@ use serenity::model::id::{ChannelId, GuildId};
 
 struct Handler {
     is_loop_running: AtomicBool,
+    list_data: Vec<String>,
 }
 
 #[async_trait]
@@ -42,7 +43,7 @@ impl EventHandler for Handler {
                 _ => unknown::unknown(&msg, &ctx).await,
             }
         } else {
-            notify::notify(&msg, &ctx).await;
+            notify::notify(&msg, &ctx, self.list_data.clone()).await;
         }
     }
     async fn ready(&self, _: Context, ready: Ready) {
@@ -111,29 +112,18 @@ async fn log_system_load(ctx: &Context) {
 async fn main() {
     dotenv().ok();
     let token = env::var("DISCORD_TOKEN").expect("Expected a Discord token in the environment");
+    let list_data = include_str!("auto/data/data.txt")
+        .lines()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
     let mut client = Client::builder(&token, GatewayIntents::all())
         .event_handler(Handler {
             is_loop_running: AtomicBool::new(false),
+            list_data,
         })
         .await
         .expect("Error creating client");
-
     if let Err(why) = client.start().await {
         eprintln!("Client error: {why:?}");
     }
 }
-// async fn main() {
-//     dotenv().ok();
-//     let token = env::var("DISCORD_TOKEN")
-//         .expect("Failed to get DISCORD_TOKEN from the environment variables");
-
-//     let mut client = Client::builder(token, GatewayIntents::all())
-//         .event_handler(Handler)
-//         .intents(GatewayIntents::all())
-//         .await
-//         .expect("Error creating client");
-
-//     if let Err(why) = client.start().await {
-//         println!("Client error: {:?}", why);
-//     }
-// }
