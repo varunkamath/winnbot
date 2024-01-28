@@ -12,9 +12,11 @@ use serenity::{
 use shakmaty::*;
 
 pub async fn puzzle(msg: &Message, ctx: &Context) {
+    let mut sol = false;
     if msg.content == "!sol" || msg.content == "!solution" {
         let file_path = std::path::Path::new("puzzle.png");
         if file_path.exists() {
+            sol = true;
             println!("Sending solution");
             let solution = std::env::var("SOLUTION").unwrap();
             let puzzle_id = std::env::var("PUZZLE_ID").unwrap();
@@ -149,7 +151,7 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
     let time = tokio::time::Instant::now();
     println!("Solution: {}", solution.join(" "));
     std::env::set_var("SOLUTION", solution.join(" "));
-    while correct == false && timeout == false {
+    while correct == false && timeout == false && sol == false {
         println!("{}", time.elapsed().as_secs_f32());
         if time.elapsed().as_secs_f32() > 90.0 {
             if let Err(why) = msg.react(&ctx.http, '⏰').await {
