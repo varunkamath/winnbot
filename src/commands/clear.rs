@@ -22,11 +22,11 @@ pub async fn clear(msg: &Message, ctx: &Context) {
             let channel_id = msg.channel_id;
             let builder = GetMessages::new().before(msg.id).limit(num_messages);
             let messages = channel_id.messages(&ctx.http, builder).await.unwrap();
+            channel_id.delete_message(&ctx.http, msg.id).await.unwrap();
             channel_id
                 .delete_messages(&ctx.http, messages)
                 .await
                 .unwrap();
-            channel_id.delete_message(&ctx.http, msg.id).await.unwrap();
             println!("{} messages deleted", num_messages);
         } else {
             println!("User is not authorized!");

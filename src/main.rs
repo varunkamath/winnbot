@@ -116,6 +116,13 @@ async fn main() {
         .lines()
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
+    // Print the list of names
+    println!("List of names:");
+    for name in &list_data {
+        println!("{}", name);
+    }
+    // Print 2nd name
+    println!("2nd name: {}", list_data[1]);
     let mut client = Client::builder(&token, GatewayIntents::all())
         .event_handler(Handler {
             is_loop_running: AtomicBool::new(false),
