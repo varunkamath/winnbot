@@ -40,6 +40,9 @@ impl EventHandler for Handler {
                     clear::clear(&msg, &ctx).await
                 }
                 "!puzzle" | "!p" | "!solution" | "!sol" => puzzle::puzzle(&msg, &ctx).await,
+                content if content.starts_with("!rlrank") || content.starts_with("!r") => {
+                    rank::rlrank(&msg, &ctx).await
+                }
                 _ => unknown::unknown(&msg, &ctx).await,
             }
         } else {
