@@ -57,7 +57,7 @@ impl EventHandler for Handler {
             tokio::spawn(async move {
                 loop {
                     log_system_load(&ctx1).await;
-                    tokio::time::sleep(Duration::from_secs(600)).await;
+                    tokio::time::sleep(Duration::from_secs(6000)).await;
                 }
             });
             // let ctx2 = Arc::clone(&ctx);
@@ -79,7 +79,7 @@ async fn log_system_load(ctx: &Context) {
         .title("System Resource Load")
         .field(
             "CPU Load Average",
-            format!("{:.2}%", cpu_load.one * 10.0),
+            format!("{:.4}%", cpu_load.one * 10.0),
             false,
         )
         .field(
