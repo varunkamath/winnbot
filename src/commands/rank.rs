@@ -1,10 +1,9 @@
-// Desc: Get Rocket League rank (TODO)
+// Desc: Get Rocket League rank
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use serde_json::Value;
 use serenity::{
-    all::Embed,
-    builder::{CreateAttachment, CreateEmbed, CreateMessage, GetMessages},
+    builder::{CreateEmbed, CreateMessage},
     model::channel::Message,
     prelude::*,
 };
@@ -26,13 +25,13 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
             .await;
         return;
     }
-    let mut platform = args.next().unwrap();
     let mut username = args.next().unwrap();
+    let mut platform = args.next().unwrap();
     // If platform is the first argument, swap the arguments
-    if args.clone().next().unwrap().to_lowercase() == "steam"
-        || args.clone().next().unwrap().to_lowercase() == "epic"
-        || args.clone().next().unwrap().to_lowercase() == "psn"
-        || args.clone().next().unwrap().to_lowercase() == "xbox"
+    if username.to_lowercase() == "steam"
+        || username.to_lowercase() == "epic"
+        || username.to_lowercase() == "psn"
+        || username.to_lowercase() == "xbox"
     {
         // Swap the arguments
         let temp = username;
@@ -91,7 +90,6 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
         println!("{:?}", rank);
     }
     let mut embed = CreateEmbed::new().title(format!("Rocket League Ranks: {}", username));
-    // Add the highest MMR rank to the embed
     let (name, rank, division, mmr, rank_img_url) = ranks[highest_mmr_index];
     embed = embed.field(
         format!("Highest Ranked Playlist: {}", name),
@@ -103,7 +101,6 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
     );
     embed = embed.thumbnail(rank_img_url);
     for rank in ranks {
-        // Create the embed, with the title being the playlist name, the description being the rank and division, and the image being the rank image for each playlist
         let (name, rank, division, mmr, _) = rank;
         embed = embed.field(
             name,
@@ -112,12 +109,9 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
         )
         // .image(rank_img_url);
     }
-    // Blue color
     embed = embed.color(0x0000ff);
     let builder = CreateMessage::new().content("").tts(false).embed(embed);
     let _ = msg.channel_id.send_message(&ctx.http, builder).await;
-    // Delete the response.json file
     std::fs::remove_file("response.json").unwrap();
-    // Return
     return;
 }
