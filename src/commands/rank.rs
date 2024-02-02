@@ -1,38 +1,123 @@
 // Desc: Get Rocket League rank (TODO)
-use dotenvy::dotenv;
-use image::GenericImageView;
-use pgnparse::parser::*;
-use rand::seq::SliceRandom;
-use ratcurl::easy::{self, Easy, List};
-use reqwest::{get, header, Response};
+use pyo3::prelude::*;
+use pyo3::types::PyTuple;
 use serde_json::Value;
-use serenity::framework::standard::{Args, CommandResult};
 use serenity::{
-    async_trait,
+    all::Embed,
     builder::{CreateAttachment, CreateEmbed, CreateMessage, GetMessages},
-    model::{channel::Message, gateway::Ready, id::UserId},
+    model::channel::Message,
     prelude::*,
 };
-use std::env;
-use std::io::{stdout, Read, Write};
 
 pub async fn rlrank(msg: &Message, ctx: &Context) {
     println!("Getting Rocket League rank");
-    // Command will come in the form of !rlrank <username> <platform>
-    // Command might be !rlrank or !r
     let mut content = msg.content[3..].trim();
     if msg.content.starts_with("!rlrank") {
         content = msg.content[8..].trim();
     }
     let mut args = content.split_whitespace();
-    let username = args.next().unwrap();
-    let platform = args.next().unwrap();
-    // Print both
+    if args.clone().count() < 2 {
+        let _ = msg
+            .channel_id
+            .say(
+                &ctx.http,
+                "Not enough arguments. Usage: !r <username> <platform>",
+            )
+            .await;
+        return;
+    }
+    let mut platform = args.next().unwrap();
+    let mut username = args.next().unwrap();
+    // If platform is the first argument, swap the arguments
+    if args.clone().next().unwrap().to_lowercase() == "steam"
+        || args.clone().next().unwrap().to_lowercase() == "epic"
+        || args.clone().next().unwrap().to_lowercase() == "psn"
+        || args.clone().next().unwrap().to_lowercase() == "xbox"
+    {
+        // Swap the arguments
+        let temp = username;
+        username = platform;
+        platform = temp;
+    }
     println!("Username: {}", username);
     println!("Platform: {}", platform);
-    // Get the user's Rocket League ID
-    let mut url = "https://api.tracker.gg/api/v2/rocket-league/standard/profile/".to_string();
-    url.push_str(platform);
-    url.push_str("/");
-    url.push_str(username);
+    let py_script = include_str!("./get_rank.py");
+    Python::with_gil(|py| -> PyResult<()> {
+        let fun: Py<PyAny> = PyModule::from_code(py, py_script, "rank.py", "rank")
+            .unwrap()
+            .getattr("get_rank")
+            .unwrap()
+            .into();
+        let args = PyTuple::new(py, &[username, platform]);
+        fun.call1(py, args).unwrap();
+        Ok(())
+    })
+    .unwrap();
+    let response = std::fs::read_to_string("response.json").unwrap();
+    let json: Value = serde_json::from_str(&response).unwrap();
+    let segments = json["data"]["segments"].as_array().unwrap();
+    let mut ranks = vec![];
+    for segment in segments {
+        if segment["type"].as_str().unwrap() == "playlist" {
+            let name = segment["metadata"]["name"].as_str().unwrap();
+            let rank = segment["stats"]["tier"]["metadata"]["name"]
+                .as_str()
+                .unwrap();
+            let division = segment["stats"]["division"]["metadata"]["name"]
+                .as_str()
+                .unwrap();
+            let mmr = segment["stats"]["rating"]["value"].as_u64().unwrap();
+            let rank_img_url = segment["stats"]["tier"]["metadata"]["iconUrl"]
+                .as_str()
+                .unwrap();
+            ranks.push((name, rank, division, mmr, rank_img_url));
+        }
+    }
+    let mut highest_mmr = 0;
+    let mut highest_mmr_index = 0;
+    for (i, rank) in ranks.iter().enumerate() {
+        let (name, _, _, mmr, _) = rank;
+        if *name == "Un-Ranked" {
+            continue;
+        }
+        if mmr > &highest_mmr {
+            highest_mmr = *mmr;
+            highest_mmr_index = i;
+        }
+    }
+
+    let new_ranks = &ranks;
+    for rank in new_ranks {
+        println!("{:?}", rank);
+    }
+    let mut embed = CreateEmbed::new().title(format!("Rocket League Ranks: {}", username));
+    // Add the highest MMR rank to the embed
+    let (name, rank, division, mmr, rank_img_url) = ranks[highest_mmr_index];
+    embed = embed.field(
+        format!("Highest Ranked Playlist: {}", name),
+        format!(
+            "Highest Rank: {}\nDivision: {}\nMMR: {}",
+            rank, division, mmr
+        ),
+        false,
+    );
+    embed = embed.thumbnail(rank_img_url);
+    for rank in ranks {
+        // Create the embed, with the title being the playlist name, the description being the rank and division, and the image being the rank image for each playlist
+        let (name, rank, division, mmr, _) = rank;
+        embed = embed.field(
+            name,
+            format!("Rank: {}\nDivision: {}\nMMR: {}", rank, division, mmr),
+            true,
+        )
+        // .image(rank_img_url);
+    }
+    // Blue color
+    embed = embed.color(0x0000ff);
+    let builder = CreateMessage::new().content("").tts(false).embed(embed);
+    let _ = msg.channel_id.send_message(&ctx.http, builder).await;
+    // Delete the response.json file
+    std::fs::remove_file("response.json").unwrap();
+    // Return
+    return;
 }
