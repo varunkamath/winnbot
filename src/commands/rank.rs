@@ -52,7 +52,7 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
         Ok(())
     })
     .unwrap();
-    let response = std::fs::read_to_string("response.json").unwrap();
+    let response = std::fs::read_to_string("./response.json").unwrap();
     let json: Value = serde_json::from_str(&response).unwrap();
     let segments = json["data"]["segments"].as_array().unwrap();
     let mut ranks = vec![];

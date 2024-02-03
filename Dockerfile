@@ -1,9 +1,9 @@
 FROM rust:1.75 as builder
 
 WORKDIR /usr/src/winn
-COPY . .
 RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --break-system-packages cloudscraper
+COPY . .
 RUN cargo install --path .
 
 FROM debian:bookworm-slim
