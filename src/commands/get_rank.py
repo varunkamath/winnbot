@@ -7,6 +7,9 @@ def get_rank(username, platform):
     url = f"https://api.tracker.gg/api/v2/rocket-league/standard/profile/{platform}/{username}"
     scraper = cloudscraper.create_scraper()
     response = scraper.get(url)
+    # Print the URL and status code
+    print(f"URL: {url}")
+    print(f"Status code: {response.status_code}")
     # Check if the response was successful
     if response.status_code == 200:
         # data = response.json()  # Parse the JSON response
