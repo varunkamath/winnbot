@@ -10,12 +10,28 @@ use serenity::{
 
 pub async fn rlrank(msg: &Message, ctx: &Context) {
     println!("Getting Rocket League rank");
-    let mut content = msg.content[3..].trim();
-    if msg.content.starts_with("!rlrank") {
-        content = msg.content[8..].trim();
+    let mut content = msg.content.clone();
+    if content.len() < 3 {
+        println!("Not enough arguments");
+        let _ = msg
+            .channel_id
+            .say(
+                &ctx.http,
+                "Not enough arguments. Usage: !r <username> <platform>",
+            )
+            .await;
+        return;
     }
+    if msg.content.starts_with("!rlrank") {
+        content = msg.content[8..].trim().to_string();
+    } else {
+        content = msg.content[3..].trim().to_string();
+    }
+    println!("Content: {}", content);
     let mut args = content.split_whitespace();
-    if args.clone().count() < 2 {
+    let num_args = args.clone().count();
+    println!("Num args: {}", num_args);
+    if num_args < 1 {
         let _ = msg
             .channel_id
             .say(
@@ -26,14 +42,31 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
         return;
     }
     let mut username = args.next().unwrap();
-    let mut platform = args.next().unwrap();
-    // If platform is the first argument, swap the arguments
+    let mut platform = "epic";
+    if num_args == 1 {
+        println!("Platform not specified");
+        if username.to_lowercase() == "steam"
+            || username.to_lowercase() == "epic"
+            || username.to_lowercase() == "psn"
+            || username.to_lowercase() == "xbox"
+        {
+            let _ = msg
+                .channel_id
+                .say(
+                    &ctx.http,
+                    "Not enough arguments. Usage: !r <username> <platform>",
+                )
+                .await;
+            return;
+        }
+    } else {
+        platform = args.next().unwrap();
+    }
     if username.to_lowercase() == "steam"
         || username.to_lowercase() == "epic"
         || username.to_lowercase() == "psn"
         || username.to_lowercase() == "xbox"
     {
-        // Swap the arguments
         let temp = username;
         username = platform;
         platform = temp;
@@ -41,6 +74,7 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
     println!("Username: {}", username);
     println!("Platform: {}", platform);
     let py_script = include_str!("./get_rank.py");
+    let mut py_resp: String = "".to_string();
     Python::with_gil(|py| -> PyResult<()> {
         let fun: Py<PyAny> = PyModule::from_code(py, py_script, "rank.py", "rank")
             .unwrap()
@@ -48,11 +82,11 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
             .unwrap()
             .into();
         let args = PyTuple::new(py, &[username, platform]);
-        fun.call1(py, args).unwrap();
+        py_resp = fun.call1(py, args).unwrap().to_string();
         Ok(())
     })
     .unwrap();
-    let response = std::fs::read_to_string("./response.json").unwrap();
+    let response = py_resp;
     let json: Value = serde_json::from_str(&response).unwrap();
     let segments = json["data"]["segments"].as_array().unwrap();
     let mut ranks = vec![];
@@ -74,44 +108,77 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
     }
     let mut highest_mmr = 0;
     let mut highest_mmr_index = 0;
-    for (i, rank) in ranks.iter().enumerate() {
-        let (name, _, _, mmr, _) = rank;
-        if *name == "Un-Ranked" {
-            continue;
-        }
-        if mmr > &highest_mmr {
-            highest_mmr = *mmr;
-            highest_mmr_index = i;
-        }
-    }
 
     let new_ranks = &ranks;
     for rank in new_ranks {
         println!("{:?}", rank);
     }
     let mut embed = CreateEmbed::new().title(format!("Rocket League Ranks: {}", username));
-    let (name, rank, division, mmr, rank_img_url) = ranks[highest_mmr_index];
+    let mut std_ranks = vec![];
+    for rank in new_ranks {
+        let (name, rank, division, mmr, rank_img_url) = rank;
+        if *name == "Ranked Duel 1v1" {
+            std_ranks.push((name, rank, division, mmr, rank_img_url));
+        }
+        if *name == "Ranked Doubles 2v2" {
+            std_ranks.push((name, rank, division, mmr, rank_img_url));
+        }
+        if *name == "Ranked Standard 3v3" {
+            std_ranks.push((name, rank, division, mmr, rank_img_url));
+        }
+    }
+    for (i, rank) in std_ranks.iter().enumerate() {
+        let (name, _, _, mmr, _) = rank;
+        if **name == "Un-Ranked" {
+            continue;
+        }
+        if **mmr > highest_mmr {
+            highest_mmr = **mmr;
+            highest_mmr_index = i;
+        }
+    }
+    let (name, rank, division, mmr, rank_img_url) = std_ranks[highest_mmr_index];
     embed = embed.field(
-        format!("Highest Ranked Playlist: {}", name),
-        format!(
-            "Highest Rank: {}\nDivision: {}\nMMR: {}",
-            rank, division, mmr
-        ),
+        format!("Highest Ranked Standard Playlist: {}", name),
+        format!("Highest Rank: {} {}\nMMR: {}", rank, division, mmr),
         false,
     );
-    embed = embed.thumbnail(rank_img_url);
-    for rank in ranks {
+    embed = embed.thumbnail(*rank_img_url);
+    for rank in std_ranks {
         let (name, rank, division, mmr, _) = rank;
+        let rank_emoji = match *rank {
+            "Bronze I" => "<:Bronze1:908453289945886760>",
+            "Bronze II" => "<:Bronze2:908453289996197948>",
+            "Bronze III" => "<:Bronze3:908453289421590549>",
+            "Silver I" => "<:Silver1:908453289929089075>",
+            "Silver II" => "<:Silver2:908453289769717791>",
+            "Silver III" => "<:Silver3:908453289899728917>",
+            "Gold I" => "<:Gold1:908453289799057428>",
+            "Gold II" => "<:Gold2:908453289807470602>",
+            "Gold III" => "<:Gold3:908453289857785876>",
+            "Platinum I" => "<:Plat1:908453289643888721>",
+            "Platinum II" => "<:Plat2:908453289878757396>",
+            "Platinum III" => "<:Plat3:908453289572585543>",
+            "Diamond I" => "<:Diamond1:908453289807446037>",
+            "Diamond II" => "<:Diamond2:908453289903939584>",
+            "Diamond III" => "<:Diamond3:908453289836814376>",
+            "Champion I" => "<:Champ1:908453289820033104>",
+            "Champion II" => "<:Champ2:908453289857781800>",
+            "Champion III" => "<:Champ3:908453289945866250>",
+            "Grand Champion I" => "<:GrandChamp1:908455642061238293>",
+            "Grand Champion II" => "<:GrandChamp2:908455641838944276>",
+            "Grand Champion III" => "<:GrandChamp3:908455642245759006>",
+            "Supersonic Legend" => "<:SupersonicLegend:757171265768259664>",
+            _ => "<:Unranked:908466188588310548>",
+        };
         embed = embed.field(
-            name,
-            format!("Rank: {}\nDivision: {}\nMMR: {}", rank, division, mmr),
-            true,
+            *name,
+            format!("{} {} {}\nMMR: {}", rank_emoji, rank, division, mmr),
+            false,
         )
-        // .image(rank_img_url);
     }
-    embed = embed.color(0x0000ff);
+    embed = embed.color(0x00bfff);
     let builder = CreateMessage::new().content("").tts(false).embed(embed);
     let _ = msg.channel_id.send_message(&ctx.http, builder).await;
-    std::fs::remove_file("response.json").unwrap();
     return;
 }
