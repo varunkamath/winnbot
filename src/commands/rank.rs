@@ -145,7 +145,10 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
     let (name, rank, division, mmr, rank_img_url) = std_ranks[highest_mmr_index];
     embed = embed.field(
         format!("Highest Ranked Standard Playlist: {}", name),
-        format!("Highest Rank: {} {}\nMMR: {}", rank, division, mmr),
+        format!(
+            "Highest Rank: {} {}\nMMR: {}\n~~                                                                ~~",
+            rank, division, mmr
+        ),
         false,
     );
     embed = embed.thumbnail(*rank_img_url);
@@ -207,9 +210,9 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
             }
         }
         embed = embed.field(
-            *name,
+            format!("__{}__", *name),
             format!(
-                "{} {} {}\nMMR: {}\nNext division in {} MMR",
+                "{} {} {}\nMMR: {}\n**Next division in {} MMR**",
                 rank_emoji, rank, division, mmr, mmr_to_next_rank
             ),
             false,
