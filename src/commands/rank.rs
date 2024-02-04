@@ -87,6 +87,7 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
     })
     .unwrap();
     let response = py_resp;
+    println!("Response: {}", response);
     let json: Value = serde_json::from_str(&response).unwrap();
     let segments = json["data"]["segments"].as_array().unwrap();
     let mut ranks = vec![];

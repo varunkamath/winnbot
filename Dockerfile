@@ -1,4 +1,4 @@
-FROM rust:1.75 as builder
+FROM rust:latest as builder
 
 WORKDIR /usr/src/winn
 RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*
