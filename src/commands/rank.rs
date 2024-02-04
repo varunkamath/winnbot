@@ -87,7 +87,7 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
     })
     .unwrap();
     let response = py_resp;
-    println!("Response: {}", response);
+    // println!("Response: {}", response); // Uncomment to debug (some IPs are still blocked by Cloudflare)
     let json: Value = serde_json::from_str(&response).unwrap();
     let segments = json["data"]["segments"].as_array().unwrap();
     let mut ranks = vec![];
@@ -129,42 +129,9 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
             std_ranks.push((name, rank, division, mmr, rank_img_url));
         }
     }
-    // Get MMR to next rank. MMR range for each rank is stored in ranks.txt, sample below:
-    /*
-    Supersonic Legend Division I, 1341 - 1527
-    Grand Champion III Division I, 1282 - 1298
-    Grand Champion III Division II, 1300 - 1313
-    Grand Champion III Division III, 1318 - 1330
-    Grand Champion III Division IV, 1337 - 1349
-    Grand Champion II Division I, 1225 - 1238
-    Grand Champion II Division II, 1239 - 1255
-    Grand Champion II Division III, 1258 - 1270
-    Grand Champion II Division IV, 1277 - 1286
-    Grand Champion I Division I, 1175 - 1178
-    Grand Champion I Division II, 1179 - 1197
-    Grand Champion I Division III, 1198 - 1212
-    Grand Champion I Division IV, 1217 - 1225
-     */
     let mut mmr_to_next_rank = 0;
     let mut next_rank = "";
     let mut next_division = "";
-    // Load ranks.txt
-    // For all standard ranks, get MMR to next rank
-    // for rank in std_ranks.clone() {
-    //     let (name, rank, division, mmr, _) = rank;
-    //     let rank_name = format!("{} {}", rank, division);
-    //     for line in rank_mmrs.clone() {
-    //         let rank_mmr: Vec<&str> = line.split(", ").collect();
-    //         if rank_mmr[0] == rank_name {
-    //             let mmr_range: Vec<&str> = rank_mmr[1].split(" - ").collect();
-    //             let lower_mmr = mmr_range[0].parse::<u64>().unwrap();
-    //             let upper_mmr = mmr_range[1].parse::<u64>().unwrap();
-    //             mmr_to_next_rank = upper_mmr - mmr;
-    //             next_rank = rank;
-    //             next_division = division;
-    //         }
-    //     }
-    // }
     for (i, rank) in std_ranks.iter().enumerate() {
         let (name, _, _, mmr, _) = rank;
         if **name == "Un-Ranked" {
@@ -211,22 +178,32 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
         };
         let full_name = format!("{} {}", rank, division);
         let rank_file = match *name {
-            "Ranked Duel 1v1" => include_str!("./1v1-ranks.txt"),
-            "Ranked Doubles 2v2" => include_str!("./2v2-ranks.txt"),
-            "Ranked Standard 3v3" => include_str!("./3v3-ranks.txt"),
-            _ => include_str!("./2v2-ranks.txt"),
+            "Ranked Duel 1v1" => include_str!("./data/1v1-ranks.txt"),
+            "Ranked Doubles 2v2" => include_str!("./data/2v2-ranks.txt"),
+            "Ranked Standard 3v3" => include_str!("./data/3v3-ranks.txt"),
+            _ => include_str!("./data/2v2-ranks.txt"),
         };
         let rank_mmrs: Vec<&str> = rank_file.split("\n").collect();
         for line in rank_mmrs.clone() {
             let rank_mmr: Vec<&str> = line.split(", ").collect();
+            if *name == "Supersonic Legend" {
+                // next_rank = "N/A";
+                // next_division = "N/A";
+                mmr_to_next_rank = 0;
+                break;
+            }
             if rank_mmr[0] == full_name {
-                let mmr_range: Vec<&str> = rank_mmr[1].split(" - ").collect();
-                let lower_mmr = mmr_range[0].parse::<u64>().unwrap();
-                let upper_mmr = mmr_range[1].parse::<u64>().unwrap();
-                println!("Upper MMR: {}", upper_mmr);
-                mmr_to_next_rank = upper_mmr - mmr;
-                // next_rank = rank;
-                // next_division = division;
+                let next_rank_mmr =
+                    rank_mmrs[rank_mmrs.iter().position(|&x| x == line).unwrap() + 1];
+                let next_rank_mmr: Vec<&str> = next_rank_mmr.split(", ").collect();
+                println!("{:?}", next_rank_mmr);
+                // next_rank = next_rank_mmr[0].split(" ").collect::<Vec<&str>>()[1];
+                // next_division = next_rank_mmr[0].split(" ").collect::<Vec<&str>>()[2];
+                mmr_to_next_rank = next_rank_mmr[1].split(" - ").collect::<Vec<&str>>()[0]
+                    .parse::<u64>()
+                    .unwrap()
+                    - *mmr;
+                break;
             }
         }
         embed = embed.field(
