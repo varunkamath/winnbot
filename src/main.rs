@@ -43,6 +43,7 @@ impl EventHandler for Handler {
                 content if content.starts_with("!rlrank") || content.starts_with("!r") => {
                     rank::rlrank(&msg, &ctx).await
                 }
+                "!sys" => log_system_load(&ctx).await,
                 _ => unknown::unknown(&msg, &ctx).await,
             }
         } else {
