@@ -209,7 +209,7 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
         embed = embed.field(
             *name,
             format!(
-                "{} {} {}\nMMR: {}\nNext rank in {} MMR",
+                "{} {} {}\nMMR: {}\nNext division in {} MMR",
                 rank_emoji, rank, division, mmr, mmr_to_next_rank
             ),
             false,
