@@ -1,47 +1,27 @@
 // Desc: Play a random chess puzzle
 use image::GenericImageView;
 use pgnparse::parser::*;
+use poise::serenity_prelude as serenity;
 use rand::seq::SliceRandom;
 use reqwest::{get, Response};
 use serde_json::Value;
-use serenity::{
-    builder::{CreateAttachment, CreateEmbed, CreateEmbedFooter, CreateMessage, GetMessages},
-    model::channel::Message,
-    prelude::*,
+use serenity::builder::{
+    CreateAttachment, CreateEmbed, CreateEmbedFooter, CreateMessage, GetMessages,
 };
 use shakmaty::*;
 
-pub async fn puzzle(msg: &Message, ctx: &Context) {
+type Error = Box<dyn std::error::Error + Send + Sync>;
+type Context<'a> = poise::Context<'a, crate::Data, Error>;
+
+#[poise::command(
+    // context_menu_command = "Play a random chess puzzle",
+    slash_command,
+    prefix_command,
+    aliases("p")
+)]
+pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
+    #[allow(unused)]
     let mut sol = false;
-    if msg.content == "!sol" || msg.content == "!solution" {
-        let file_path = std::path::Path::new("puzzle.png");
-        if file_path.exists() {
-            sol = true;
-            println!("Sending solution");
-            let solution = std::env::var("SOLUTION").unwrap();
-            let puzzle_id = std::env::var("PUZZLE_ID").unwrap();
-            let embed = CreateEmbed::new().title("Solution").description(format!(
-                "Solution: {}\n\n[lichess](https://lichess.com/training/{})",
-                solution, puzzle_id
-            ));
-            let builder = CreateMessage::new().content("").tts(false).embed(embed);
-            let _ = msg.channel_id.send_message(&ctx.http, builder).await;
-            std::fs::remove_file("puzzle.png").unwrap();
-            std::env::set_var("PUZZLE_ID", "");
-            std::env::set_var("SOLUTION", "");
-            return;
-        } else {
-            println!("No puzzle in progress");
-            let embed = CreateEmbed::new()
-                .title("No puzzle in progress")
-                .description("Use !puzzle to start a new puzzle");
-            let builder = CreateMessage::new().content("").tts(false).embed(embed);
-            if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
-                println!("Error sending message: {:?}", why);
-            }
-            return;
-        }
-    }
     let file_path = std::path::Path::new("puzzle.png");
     if file_path.exists() {
         println!("Puzzle already in progress");
@@ -49,12 +29,12 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
             .title("Puzzle already in progress")
             .description("Solve the puzzle, send \"!sol\", or wait for the timeout (90s)");
         let builder = CreateMessage::new().content("").tts(false).embed(embed);
-        if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
+        if let Err(why) = ctx.channel_id().send_message(ctx.http(), builder).await {
             println!("Error sending message: {:?}", why);
         }
-        return;
+        return Ok(());
     }
-    let puzzle_player_id = msg.author.id.to_string();
+    let puzzle_player_id = ctx.author().id.to_string();
     let file_contents = include_str!("data/puzzles.csv");
     let lines = file_contents.lines().collect::<Vec<&str>>();
     let line = lines.choose(&mut rand::thread_rng()).unwrap();
@@ -88,28 +68,45 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
         .collect::<Vec<&str>>();
     let solution = solution.join(" ");
     let url = format!("https://fen2image.chessvision.ai/{}", fen);
-    let response: Response = get(&url).await.unwrap();
+    let response: Response = get(&url).await?;
     let image = response.bytes().await.unwrap();
     let image = image::load_from_memory(&image).unwrap();
     let (width, _) = image.dimensions();
     let image = image.crop_imm(0, 0, width, width);
     image.save("puzzle.png").unwrap();
-    let attachment = CreateAttachment::path("puzzle.png").await;
+    let attachment = CreateAttachment::path("puzzle.png").await?;
     let footer = CreateEmbedFooter::new(format!("Puzzle ID: {}", line));
-    let embed = CreateEmbed::new()
+    // let embed = CreateEmbed::new()
+    //     .title("Puzzle")
+    //     .footer(footer)
+    //     .description(format!(
+    //         "{} to move. Input a move in UCI format (example: b4b5, d7e8, etc.)\n\n[lichess](https://lichess.com/training/{})",
+    //         whose_turn, line
+    //     ))
+    //     .attachment("puzzle.png");
+    let reply = {
+        let embed = CreateEmbed::new()
         .title("Puzzle")
         .footer(footer)
         .description(format!(
-            "{} to move. Input a move in UCI format (example: b4b5, d7e8, etc.)\n\n[lichess](https://lichess.com/training/{})",
+            "{} to move. Input a move in UCI format (example: b4b5, d7e8, etc.)\n\n[lichess](https://lichess.org/training/{})",
             whose_turn, line
         ))
         .attachment("puzzle.png");
-    let builder = CreateMessage::new().content("").tts(false).embed(embed);
-    let _ = msg
-        .channel_id
-        .send_files(&ctx.http, attachment, builder)
-        .await
-        .unwrap();
+        poise::CreateReply::default()
+            .content("")
+            .embed(embed)
+            .attachment(attachment)
+        // .components(components)
+    };
+    ctx.send(reply).await?;
+    // let reply = CreateReply::to_prefix(self, invocation_message) //::new().embed(embed);
+    // let builder = CreateMessage::new().content("").tts(false).embed(embed);
+    // ctx.send(CreateMessage::new().content("").tts(false).embed(embed));
+    // let _ = ctx
+    //     .channel_id()
+    //     .send_files(ctx.http(), attachment, builder)
+    //     .await?;
     let board = shakmaty::Board::from_ascii_board_fen(board_fen.as_bytes()).unwrap();
     println!("{:?}", board.occupied());
     let mut setup = Setup::empty();
@@ -155,26 +152,29 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
         let file_path = std::path::Path::new("puzzle.png");
         if !file_path.exists() {
             println!("Puzzle deleted");
-            return;
+            return Ok(());
         }
         println!("{}", time.elapsed().as_secs_f32());
         if time.elapsed().as_secs_f32() > 90.0 {
-            if let Err(why) = msg.react(&ctx.http, '⏰').await {
-                println!("Error reacting to message: {:?}", why);
-            }
-            let embed = CreateEmbed::new()
-                .title("Time's up!")
-                .description(format!("Solution: {}", original_solution));
-            let builder = CreateMessage::new().content("").tts(false).embed(embed);
-            if let Err(why) = msg.channel_id.send_message(&ctx.http, builder).await {
-                println!("Error sending message: {:?}", why);
-            }
+            let reply = {
+                let embed = CreateEmbed::new()
+                    .title("Time's up!")
+                    .description(format!("Solution: {}", original_solution));
+
+                poise::CreateReply::default().content("").embed(embed)
+                // .attachment(attachment)
+            };
+            ctx.send(reply).await?;
+            // let builder = CreateMessage::new().content("").tts(false).embed(embed);
+            // if let Err(why) = ctx.channel_id().send_message(ctx.http(), builder).await {
+            //     println!("Error sending message: {:?}", why);
+            // }
             timeout = true;
             continue;
         }
-        let mut messages = msg
-            .channel_id
-            .messages(&ctx.http, GetMessages::new().limit(1))
+        let mut messages = ctx
+            .channel_id()
+            .messages(ctx.http(), GetMessages::new().limit(1))
             .await
             .unwrap();
         let message = messages.pop().unwrap();
@@ -182,31 +182,39 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
             continue;
         }
         if !uci_legals.contains(&message.content.to_lowercase()) {
-            if let Err(why) = message.react(&ctx.http, '❓').await {
+            if let Err(why) = message.react(ctx.http(), '❓').await {
                 println!("Error reacting to message: {:?}", why);
             }
             continue;
         } else if &message.content.to_lowercase() == next_move {
-            if let Err(why) = message.react(&ctx.http, '✅').await {
+            if let Err(why) = message.react(ctx.http(), '✅').await {
                 println!("Error reacting to message: {:?}", why);
             }
             next_move = solution[0];
             solution = solution[1..].to_vec();
             if solution.len() == 0 {
                 correct = true;
-                let attachment = CreateAttachment::path("./puzzle.png").await;
-                let embed = CreateEmbed::new()
-                    .title("Correct!")
-                    .description(format!("Solution: {}", original_solution))
-                    .attachment("puzzle.png");
-                let builder = CreateMessage::new().content("").tts(false).embed(embed);
-                if let Err(why) = msg
-                    .channel_id
-                    .send_files(&ctx.http, attachment, builder)
-                    .await
-                {
-                    println!("Error sending message: {:?}", why);
-                }
+                let attachment = CreateAttachment::path("./puzzle.png").await?;
+                let reply = {
+                    let embed = CreateEmbed::new()
+                        .title("Correct!")
+                        .description(format!("Solution: {}", original_solution))
+                        .attachment("puzzle.png");
+
+                    poise::CreateReply::default()
+                        .content("")
+                        .embed(embed)
+                        .attachment(attachment)
+                };
+                ctx.send(reply).await?;
+                // let builder = CreateMessage::new().content("").tts(false).embed(embed);
+                // if let Err(why) = ctx
+                //     .channel_id()
+                //     .send_files(ctx.http(), attachment, builder)
+                //     .await
+                // {
+                //     println!("Error sending message: {:?}", why);
+                // }
             } else {
                 println!("Solution before opponent move: {}", solution.join(" "));
                 println!("Your move: {}", next_move);
@@ -260,15 +268,14 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
                     .description(format!("{} to move.", whose_turn))
                     .attachment("puzzle.png");
                 let builder = CreateMessage::new().content("").tts(false).embed(embed);
-                let _ = msg
-                    .channel_id
-                    .send_files(&ctx.http, attachment, builder)
-                    .await
-                    .unwrap();
+                let _ = ctx
+                    .channel_id()
+                    .send_files(ctx.http(), attachment, builder)
+                    .await?;
                 pos = pos_new;
             }
         } else {
-            if let Err(why) = message.react(&ctx.http, '❌').await {
+            if let Err(why) = message.react(ctx.http(), '❌').await {
                 println!("Error reacting to message: {:?}", why);
             }
             continue;
@@ -276,4 +283,35 @@ pub async fn puzzle(msg: &Message, ctx: &Context) {
     }
     println!("{}", timeout);
     std::fs::remove_file("./puzzle.png").unwrap();
+    Ok(())
+}
+
+#[poise::command(slash_command, prefix_command, aliases("sol"))]
+pub async fn solution(ctx: Context<'_>) -> Result<(), Error> {
+    let file_path = std::path::Path::new("puzzle.png");
+    if file_path.exists() {
+        println!("Sending solution");
+        let solution = std::env::var("SOLUTION").unwrap();
+        let puzzle_id = std::env::var("PUZZLE_ID").unwrap();
+        let embed = CreateEmbed::new().title("Solution").description(format!(
+            "Solution: {}\n\n[lichess](https://lichess.org/training/{})",
+            solution, puzzle_id
+        ));
+        let builder = CreateMessage::new().content("").tts(false).embed(embed);
+        let _ = ctx.channel_id().send_message(ctx.http(), builder).await;
+        std::fs::remove_file("puzzle.png").unwrap();
+        std::env::set_var("PUZZLE_ID", "");
+        std::env::set_var("SOLUTION", "");
+        return Ok(());
+    } else {
+        println!("No puzzle in progress");
+        let embed = CreateEmbed::new()
+            .title("No puzzle in progress")
+            .description("Use !puzzle to start a new puzzle");
+        let builder = CreateMessage::new().content("").tts(false).embed(embed);
+        if let Err(why) = ctx.channel_id().send_message(ctx.http(), builder).await {
+            println!("Error sending message: {:?}", why);
+        }
+        return Ok(());
+    }
 }

@@ -1,10 +1,21 @@
 // Desc: Echoes a message to the channel
-use serenity::{model::channel::Message, prelude::*};
 
-pub async fn echo(msg: &Message, ctx: &Context) {
+type Error = Box<dyn std::error::Error + Send + Sync>;
+type Context<'a> = poise::Context<'a, crate::Data, Error>;
+
+#[poise::command(
+    // context_menu_command = "Echo a message",
+    slash_command,
+    prefix_command,
+    aliases("c")
+)]
+pub async fn echo(
+    ctx: Context<'_>,
+    #[description = "Message to echo"] msg: String,
+) -> Result<(), Error> {
     println!("Echoing message to channel");
-    let content = msg.content[3..].trim();
-    if let Err(why) = msg.channel_id.say(&ctx.http, content).await {
-        println!("Error sending message: {:?}", why);
-    }
+    ctx.channel_id().say(ctx.http(), msg.clone()).await?;
+    ctx.defer_ephemeral().await?;
+    ctx.say(format!("Message echoed: \"{}\"", msg)).await?;
+    Ok(())
 }

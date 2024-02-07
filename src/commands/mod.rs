@@ -1,4 +1,3 @@
-pub mod archive;
 pub mod clear;
 pub mod count;
 pub mod echo;
