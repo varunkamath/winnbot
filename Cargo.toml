@@ -20,3 +20,4 @@ sys-info = "0.9.1"
 chrono = "0.4.33"
 pyo3 = { version = "0.20.2", features = ["auto-initialize"] }
 poise = "0.6"
+vsdbsled = "0.34.7-p1"
