@@ -57,16 +57,13 @@ async fn event_handler(
     match event {
         serenity::FullEvent::Ready { data_about_bot, .. } => {
             println!("Logged in as {}", data_about_bot.user.name);
-            // let ctx1 = Arc::new(ctx.clone());
             let ctx1 = Arc::new(ctx.clone());
-            // let ctx1 = Arc::clone(&ctx);
             tokio::spawn(async move {
                 loop {
                     log_system_load(&ctx1).await.unwrap();
                     tokio::time::sleep(Duration::from_secs(6000)).await;
                 }
             });
-            // log_system_load(ctx.clone()).await?;
         }
         serenity::FullEvent::Message { new_message } => {
             if new_message.author.id == data.mudae_id {
@@ -112,6 +109,8 @@ async fn main() {
                 puzzle::puzzle(),
                 puzzle::solution(),
                 rank::rlrank(),
+                rank::rlregister(),
+                rank::rlaccount(),
                 register(),
                 // unknown::unknown,
             ],

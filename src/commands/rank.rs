@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use serde_json::Value;
 use serenity::builder::CreateEmbed;
+use vsdbsled as sled;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, crate::Data, Error>;
@@ -17,10 +18,34 @@ type Context<'a> = poise::Context<'a, crate::Data, Error>;
 )]
 pub async fn rlrank(
     ctx: Context<'_>,
-    #[description = "Rocket League username"] username: String,
+    #[description = "Rocket League username"] username: Option<String>,
     #[description = "Platform (epic, steam, psn, xbox)"] platform: Option<String>,
 ) -> Result<(), Error> {
     println!("Getting Rocket League rank");
+    ctx.defer_or_broadcast().await?;
+    // Check if user has registered their Rocket League account
+    let db = sled::open("rl-usernames")?;
+    let discord_id = ctx.author().id.to_string();
+    let value = db.get(discord_id.clone())?;
+    let username = match username {
+        Some(username) => username,
+        None => {
+            if let Some(value) = value {
+                let value = value.to_vec();
+                let value = String::from_utf8(value).unwrap();
+                let value: Vec<&str> = value.split("-").collect();
+                value[0].to_string()
+            } else {
+                let embed = CreateEmbed::new()
+                    .title("Rocket League Account")
+                    .description("You have not registered your Rocket League account. Please use the `/rlregister` command to register your account or provide your username as an argument to this command.")
+                    .color(0x00bfff);
+                let reply = { poise::CreateReply::default().content("").embed(embed) };
+                ctx.send(reply).await?;
+                return Ok(());
+            }
+        }
+    };
     // If platform is not provided, default to epic
     let platform = platform.unwrap_or("epic".to_string());
     println!("Username: {}", username);
@@ -174,5 +199,89 @@ pub async fn rlrank(
     let reply = { poise::CreateReply::default().content("").embed(embed) };
     ctx.send(reply).await?;
     println!("Sent message");
+    Ok(())
+}
+
+#[poise::command(
+    slash_command,
+    prefix_command,
+    aliases("rar"),
+    track_edits,
+    category = "Rocket League"
+)]
+pub async fn rlregister(
+    ctx: Context<'_>,
+    #[description = "Rocket League username"] username: String,
+    #[description = "Platform (epic, steam, psn, xbox)"] platform: Option<String>,
+) -> Result<(), Error> {
+    // Permanent storage of Rocket League username and platform in a sled database (key-value store)
+    let db = sled::open("rl-usernames")?;
+    // Check if user has already registered their Rocket League account
+    let discord_id = ctx.author().id.to_string();
+    let value = db.get(discord_id.clone())?;
+    if let Some(value) = value {
+        let value = value.to_vec();
+        let value = String::from_utf8(value).unwrap();
+        let value: Vec<&str> = value.split("-").collect();
+        let username = value[0];
+        let platform = value[1];
+        let embed = CreateEmbed::new()
+            .title("Rocket League Account Already Registered")
+            .field("Username", username, true)
+            .field("Platform", platform, true)
+            .color(0x00bfff);
+        let reply = { poise::CreateReply::default().content("").embed(embed) };
+        ctx.send(reply).await?;
+        return Ok(());
+    }
+    let platform = platform.unwrap_or("epic".to_string());
+    let discord_id = ctx.author().id.to_string();
+    let key = discord_id.clone();
+    let value = format!("{}-{}", username, platform);
+    let value = sled::IVec::from(value.as_bytes());
+    db.insert(key, value)?;
+    let embed = CreateEmbed::new()
+        .title("New Rocket League Account Registered")
+        .field("Username", username, true)
+        .field("Platform", platform, true)
+        .color(0x00bfff);
+    let reply = { poise::CreateReply::default().content("").embed(embed) };
+    ctx.send(reply).await?;
+    Ok(())
+}
+
+#[poise::command(
+    slash_command,
+    prefix_command,
+    aliases("rac"),
+    track_edits,
+    category = "Rocket League"
+)]
+pub async fn rlaccount(ctx: Context<'_>) -> Result<(), Error> {
+    // Check if user has registered their Rocket League account
+    let db = sled::open("rl-usernames")?;
+    let discord_id = ctx.author().id.to_string();
+    let value = db.get(discord_id)?;
+    if let Some(value) = value {
+        let value = value.to_vec();
+        let value = String::from_utf8(value).unwrap();
+        let value: Vec<&str> = value.split("-").collect();
+        let username = value[0];
+        let platform = value[1];
+        let embed = CreateEmbed::new()
+            .title("Rocket League Account")
+            .field("Username", username, true)
+            .field("Platform", platform, true)
+            .color(0x00bfff);
+        let reply = { poise::CreateReply::default().content("").embed(embed) };
+        ctx.send(reply).await?;
+    } else {
+        let embed = CreateEmbed::new()
+            .title("Rocket League Account")
+            .description("You have not registered your Rocket League account")
+            .color(0x00bfff);
+        let reply = { poise::CreateReply::default().content("").embed(embed) };
+        ctx.send(reply).await?;
+    }
     Ok(())
 }
