@@ -1,76 +1,28 @@
 // Desc: Get Rocket League rank
+use poise::serenity_prelude as serenity;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use serde_json::Value;
-use serenity::{
-    builder::{CreateEmbed, CreateMessage},
-    model::channel::Message,
-    prelude::*,
-};
+use serenity::builder::CreateEmbed;
 
-pub async fn rlrank(msg: &Message, ctx: &Context) {
+type Error = Box<dyn std::error::Error + Send + Sync>;
+type Context<'a> = poise::Context<'a, crate::Data, Error>;
+
+#[poise::command(
+    slash_command,
+    prefix_command,
+    aliases("r"),
+    track_edits,
+    category = "Rocket League"
+)]
+pub async fn rlrank(
+    ctx: Context<'_>,
+    #[description = "Rocket League username"] username: String,
+    #[description = "Platform (epic, steam, psn, xbox)"] platform: Option<String>,
+) -> Result<(), Error> {
     println!("Getting Rocket League rank");
-    let mut content = msg.content.clone();
-    if content.len() < 3 {
-        println!("Not enough arguments");
-        let _ = msg
-            .channel_id
-            .say(
-                &ctx.http,
-                "Not enough arguments. Usage: !r <username> <platform>",
-            )
-            .await;
-        return;
-    }
-    if msg.content.starts_with("!rlrank") {
-        content = msg.content[8..].trim().to_string();
-    } else {
-        content = msg.content[3..].trim().to_string();
-    }
-    println!("Content: {}", content);
-    let mut args = content.split_whitespace();
-    let num_args = args.clone().count();
-    println!("Num args: {}", num_args);
-    if num_args < 1 {
-        let _ = msg
-            .channel_id
-            .say(
-                &ctx.http,
-                "Not enough arguments. Usage: !r <username> <platform>",
-            )
-            .await;
-        return;
-    }
-    let mut username = args.next().unwrap();
-    let mut platform = "epic";
-    if num_args == 1 {
-        println!("Platform not specified");
-        if username.to_lowercase() == "steam"
-            || username.to_lowercase() == "epic"
-            || username.to_lowercase() == "psn"
-            || username.to_lowercase() == "xbox"
-        {
-            let _ = msg
-                .channel_id
-                .say(
-                    &ctx.http,
-                    "Not enough arguments. Usage: !r <username> <platform>",
-                )
-                .await;
-            return;
-        }
-    } else {
-        platform = args.next().unwrap();
-    }
-    if username.to_lowercase() == "steam"
-        || username.to_lowercase() == "epic"
-        || username.to_lowercase() == "psn"
-        || username.to_lowercase() == "xbox"
-    {
-        let temp = username;
-        username = platform;
-        platform = temp;
-    }
+    // If platform is not provided, default to epic
+    let platform = platform.unwrap_or("epic".to_string());
     println!("Username: {}", username);
     println!("Platform: {}", platform);
     let py_script = include_str!("./get_rank.py");
@@ -81,7 +33,7 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
             .getattr("get_rank")
             .unwrap()
             .into();
-        let args = PyTuple::new(py, &[username, platform]);
+        let args = PyTuple::new(py, &[username.clone(), platform]);
         py_resp = fun.call1(py, args).unwrap().to_string();
         Ok(())
     })
@@ -130,8 +82,8 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
         }
     }
     let mut mmr_to_next_rank = 0;
-    let mut next_rank = "";
-    let mut next_division = "";
+    // let mut next_rank = "";
+    // let mut next_division = "";
     for (i, rank) in std_ranks.iter().enumerate() {
         let (name, _, _, mmr, _) = rank;
         if **name == "Un-Ranked" {
@@ -219,7 +171,8 @@ pub async fn rlrank(msg: &Message, ctx: &Context) {
         )
     }
     embed = embed.color(0x00bfff);
-    let builder = CreateMessage::new().content("").tts(false).embed(embed);
-    let _ = msg.channel_id.send_message(&ctx.http, builder).await;
-    return;
+    let reply = { poise::CreateReply::default().content("").embed(embed) };
+    ctx.send(reply).await?;
+    println!("Sent message");
+    Ok(())
 }

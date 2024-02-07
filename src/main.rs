@@ -6,77 +6,21 @@ extern crate sys_info;
 use crate::auto::*;
 use crate::commands::*;
 use dotenvy::dotenv;
-use serenity::{
-    async_trait,
-    model::{channel::Message, gateway::Ready},
-    prelude::*,
-};
+use poise::serenity_prelude as serenity;
+use serenity::builder::{CreateEmbed, CreateMessage};
+use serenity::model::id::ChannelId;
 use std::env;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-// use chrono::offset::Utc;
-use serenity::builder::{CreateEmbed, CreateMessage};
-// use serenity::gateway::ActivityData;
-use serenity::model::id::{ChannelId, GuildId};
-
-struct Handler {
-    is_loop_running: AtomicBool,
+struct Data {
     list_data: Vec<String>,
+    mudae_id: u64,
 }
+type Error = Box<dyn std::error::Error + Send + Sync>;
+type Context<'a> = poise::Context<'a, Data, Error>;
 
-#[async_trait]
-impl EventHandler for Handler {
-    async fn message(&self, ctx: Context, msg: Message) {
-        // TODO: If the message is sent by this bot's user ID, ignore it
-        if msg.content.starts_with("!") {
-            match msg.content.as_str() {
-                "!help" | "!h" => help::help(&msg, &ctx).await,
-                content if content.starts_with("!e") => echo::echo(&msg, &ctx).await,
-                "!count" => count::count(&msg, &ctx).await,
-                "!archive" => archive::archive(&msg, &ctx).await,
-                content if content.starts_with("!clear") || content.starts_with("!c") => {
-                    clear::clear(&msg, &ctx).await
-                }
-                "!puzzle" | "!p" | "!solution" | "!sol" => puzzle::puzzle(&msg, &ctx).await,
-                content if content.starts_with("!rlrank") || content.starts_with("!r") => {
-                    rank::rlrank(&msg, &ctx).await
-                }
-                "!sys" => log_system_load(&ctx).await,
-                _ => unknown::unknown(&msg, &ctx).await,
-            }
-        } else {
-            notify::notify(&msg, &ctx, self.list_data.clone()).await;
-        }
-    }
-    async fn ready(&self, _: Context, ready: Ready) {
-        println!("Connected as {}", ready.user.name);
-    }
-    async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
-        println!("Cache built successfully!");
-        let ctx = Arc::new(ctx);
-        if !self.is_loop_running.load(Ordering::Relaxed) {
-            let ctx1 = Arc::clone(&ctx);
-            tokio::spawn(async move {
-                loop {
-                    log_system_load(&ctx1).await;
-                    tokio::time::sleep(Duration::from_secs(6000)).await;
-                }
-            });
-            // let ctx2 = Arc::clone(&ctx);
-            // tokio::spawn(async move {
-            //     loop {
-            //         set_activity_to_current_time(&ctx2);
-            //         tokio::time::sleep(Duration::from_secs(60)).await;
-            //     }
-            // });
-            self.is_loop_running.swap(true, Ordering::Relaxed);
-        }
-    }
-}
-
-async fn log_system_load(ctx: &Context) {
+async fn log_system_load(ctx: &poise::serenity_prelude::Context) -> Result<(), Error> {
     let cpu_load = sys_info::loadavg().unwrap();
     let mem_use = sys_info::mem_info().unwrap();
     let embed = CreateEmbed::new()
@@ -97,37 +41,99 @@ async fn log_system_load(ctx: &Context) {
             false,
         );
     let builder = CreateMessage::new().embed(embed);
-    let message = ChannelId::new(822731141781389333)
+    let _ = ChannelId::new(822731141781389333)
         .send_message(&ctx, builder)
-        .await;
-    if let Err(why) = message {
-        eprintln!("Error sending message: {why:?}");
-    };
+        .await?;
+    println!("Resource use logged, all systems nominal");
+    Ok(())
 }
 
-// fn set_activity_to_current_time(ctx: &Context) {
-//     let current_time = Utc::now();
-//     let formatted_time = current_time.to_rfc2822();
+async fn event_handler(
+    ctx: &serenity::Context,
+    event: &serenity::FullEvent,
+    _framework: poise::FrameworkContext<'_, Data, Error>,
+    data: &Data,
+) -> Result<(), Error> {
+    match event {
+        serenity::FullEvent::Ready { data_about_bot, .. } => {
+            println!("Logged in as {}", data_about_bot.user.name);
+            // let ctx1 = Arc::new(ctx.clone());
+            let ctx1 = Arc::new(ctx.clone());
+            // let ctx1 = Arc::clone(&ctx);
+            tokio::spawn(async move {
+                loop {
+                    log_system_load(&ctx1).await.unwrap();
+                    tokio::time::sleep(Duration::from_secs(6000)).await;
+                }
+            });
+            // log_system_load(ctx.clone()).await?;
+        }
+        serenity::FullEvent::Message { new_message } => {
+            if new_message.author.id == data.mudae_id {
+                notify::notify(ctx, new_message, data.list_data.clone()).await?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
 
-//     ctx.set_activity(Some(ActivityData::playing(formatted_time)));
-// }
+#[poise::command(prefix_command)]
+async fn register(ctx: Context<'_>) -> Result<(), Error> {
+    poise::builtins::register_application_commands_buttons(ctx).await?;
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+
     let token = env::var("DISCORD_TOKEN").expect("Expected a Discord token in the environment");
+    let mudae_id = env::var("MUDAE_ID")
+        .expect("Failed to get MUDAE_ID from the environment variables")
+        .parse::<u64>()
+        .unwrap();
     let list_data = include_str!("auto/data/data.txt")
         .lines()
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
-    let mut client = Client::builder(&token, GatewayIntents::all())
-        .event_handler(Handler {
-            is_loop_running: AtomicBool::new(false),
-            list_data,
+    let intents = serenity::GatewayIntents::all();
+
+    let framework = poise::Framework::builder()
+        .options(poise::FrameworkOptions {
+            event_handler: |ctx, event, framework, data| {
+                Box::pin(event_handler(ctx, event, framework, data))
+            },
+            commands: vec![
+                clear::clear(),
+                count::count(),
+                echo::echo(),
+                help::help(),
+                puzzle::puzzle(),
+                puzzle::solution(),
+                rank::rlrank(),
+                register(),
+                // unknown::unknown,
+            ],
+            prefix_options: poise::PrefixFrameworkOptions {
+                prefix: Some("!".into()),
+                ..Default::default()
+            },
+            ..Default::default()
         })
-        .await
-        .expect("Error creating client");
-    if let Err(why) = client.start().await {
-        eprintln!("Client error: {why:?}");
-    }
+        .setup(move |ctx, _ready, framework| {
+            Box::pin(async move {
+                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                Ok(Data {
+                    list_data,
+                    mudae_id,
+                })
+            })
+        })
+        .build();
+
+    let client = serenity::ClientBuilder::new(token, intents)
+        .framework(framework)
+        .await;
+    client.unwrap().start().await.unwrap();
 }
