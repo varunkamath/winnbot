@@ -111,6 +111,7 @@ async fn main() {
                 rank::rlrank(),
                 rank::rlregister(),
                 rank::rlaccount(),
+                rank::rldelete(),
                 register(),
                 // unknown::unknown,
             ],
