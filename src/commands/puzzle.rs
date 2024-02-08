@@ -1,7 +1,7 @@
 // Desc: Play a random chess puzzle
 use image::GenericImageView;
 use pgnparse::parser::*;
-use poise::{reply, serenity_prelude as serenity};
+use poise::serenity_prelude as serenity;
 use rand::seq::SliceRandom;
 use reqwest::{get, Response};
 use serde_json::Value;

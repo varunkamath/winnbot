@@ -112,6 +112,8 @@ async fn main() {
                 rank::rlregister(),
                 rank::rlaccount(),
                 rank::rldelete(),
+                prompt::prompt(),
+                prompt::imageprompt(),
                 register(),
                 // unknown::unknown,
             ],
