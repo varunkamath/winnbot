@@ -3,10 +3,19 @@ use poise::serenity_prelude as serenity;
 use serenity::builder::{CreateEmbed, CreateMessage, GetMessages};
 use std::env;
 
-type Error = Box<dyn std::error::Error + Send + Sync>;
-type Context<'a> = poise::Context<'a, crate::Data, Error>;
+use crate::Data;
 
-#[poise::command(slash_command, prefix_command, aliases("chc"))]
+type Error = Box<dyn std::error::Error + Send + Sync>;
+type Context<'a> = poise::Context<'a, Data, Error>;
+
+#[poise::command(
+    slash_command,
+    prefix_command,
+    aliases("chc"),
+    category = "Utility",
+    help_text_fn = "count_help",
+    on_error = "error_handler"
+)]
 pub async fn count(ctx: Context<'_>) -> Result<(), Error> {
     println!("Counting messages");
     let user_id = env::var("USER_ID");
@@ -27,14 +36,6 @@ pub async fn count(ctx: Context<'_>) -> Result<(), Error> {
                     .unwrap();
                 println!("{}", count);
             }
-            // let embed = CreateEmbed::new()
-            //     .title("Message Count")
-            //     .description(format!(
-            //         "Counted {} messages in this channel. Time elapsed: {} seconds",
-            //         count,
-            //         time.elapsed().as_secs()
-            //     ));
-            // let builder = CreateMessage::new().content("").tts(false).embed(embed);
             let reply = {
                 let embed = CreateEmbed::new()
                     .title("Message Count")
@@ -58,4 +59,12 @@ pub async fn count(ctx: Context<'_>) -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+fn count_help() -> String {
+    String::from("Count the number of messages in a channel")
+}
+
+async fn error_handler(error: poise::FrameworkError<'_, Data, Error>) {
+    println!("Error in command 'count': {}", error);
 }

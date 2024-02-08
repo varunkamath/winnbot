@@ -10,14 +10,19 @@ use serenity::builder::{
 };
 use shakmaty::*;
 
+use crate::Data;
+
 type Error = Box<dyn std::error::Error + Send + Sync>;
-type Context<'a> = poise::Context<'a, crate::Data, Error>;
+type Context<'a> = poise::Context<'a, Data, Error>;
 
 #[poise::command(
     // context_menu_command = "Play a random chess puzzle",
     slash_command,
     prefix_command,
-    aliases("p")
+    aliases("p"),
+    category = "Chess",
+    help_text_fn = "puzzle_help",
+    on_error = "error_handler"
 )]
 pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
     #[allow(unused)]
@@ -272,7 +277,14 @@ pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-#[poise::command(slash_command, prefix_command, aliases("sol"))]
+#[poise::command(
+    slash_command,
+    prefix_command,
+    aliases("sol"),
+    category = "Chess",
+    on_error = "sol_error_handler",
+    help_text_fn = "sol_help"
+)]
 pub async fn solution(ctx: Context<'_>) -> Result<(), Error> {
     let file_path = std::path::Path::new("puzzle.png");
     if file_path.exists() {
@@ -303,4 +315,20 @@ pub async fn solution(ctx: Context<'_>) -> Result<(), Error> {
         }
         return Ok(());
     }
+}
+
+fn puzzle_help() -> String {
+    String::from("Play a random chess puzzle")
+}
+
+fn sol_help() -> String {
+    String::from("Get the solution to the current puzzle")
+}
+
+async fn error_handler(error: poise::FrameworkError<'_, Data, Error>) {
+    println!("Error in command 'puzzle': {}", error);
+}
+
+async fn sol_error_handler(error: poise::FrameworkError<'_, Data, Error>) {
+    println!("Error in command 'sol': {}", error);
 }

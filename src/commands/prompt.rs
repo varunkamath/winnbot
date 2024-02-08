@@ -7,7 +7,15 @@ use std::env;
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, crate::Data, Error>;
 
-#[poise::command(slash_command, prefix_command, aliases("ai"))]
+#[poise::command(
+    slash_command,
+    prefix_command,
+    aliases("ai"),
+    help_text_fn = "prompt_help",
+    on_error = "error_handler",
+    category = "AI",
+    context_menu_name = "Prompt GPT-4 Turbo"
+)]
 pub async fn prompt(
     ctx: Context<'_>,
     #[description = "Prompt to send to GPT-4 Turbo"] prompt: String,
@@ -52,7 +60,14 @@ pub async fn prompt(
     Ok(())
 }
 
-#[poise::command(slash_command, prefix_command, aliases("aiim"))]
+#[poise::command(
+    slash_command,
+    prefix_command,
+    aliases("aiim"),
+    help_text_fn = "imageprompt_help",
+    on_error = "img_error_handler",
+    category = "AI"
+)]
 pub async fn imageprompt(
     ctx: Context<'_>,
     #[description = "Prompt to send to DALL-E 3"] prompt: String,
@@ -73,17 +88,6 @@ pub async fn imageprompt(
     println!("Sending prompt to DALL-E 3");
     let api_key = env::var("OPENAI_API_KEY")?;
     let client = Client::new();
-    /* Sample request
-      https://api.openai.com/v1/images/generations \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $OPENAI_API_KEY" \
-    -d '{
-      "model": "dall-e-3",
-      "prompt": "a white siamese cat",
-      "n": 1,
-      "size": "1024x1024"
-    }'
-       */
     let response = client
         .post("https://api.openai.com/v1/images/generations")
         .header("Content-Type", "application/json")
@@ -99,8 +103,6 @@ pub async fn imageprompt(
         .json::<serde_json::Value>()
         .await?;
     println!("Response: {:?}", response);
-    /* Sample response:
-    Response: Object {"created": Number(1707416476), "data": Array [Object {"revised_prompt": String("An image illustrating a small monkey, its fur a mix of browns and blacks. It is hanging lively from a thick branch of a tropical rainforest tree. The monkey's small round eyes shimmer with curiosity as it peers into the distance. Its long, slender tail, shaped like a question mark, adds an extra layer of balance as it swings in the misty rainforest environment. The scene is also adorned with lush green vegetation and vividly colored tropical flowers."), "url": String("https://oaidalleapiprodscus.blob.core.windows.net/private/org-nVewRpVr4F7pd8CAqsQqVOVA/user-VUuMtxs6n1lqvJ0irminKXEk/img-ZCZLeuFy1Og9AuxVrUpTbClR.png?st=2024-02-08T17%3A21%3A16Z&se=2024-02-08T19%3A21%3A16Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2024-02-08T03%3A22%3A10Z&ske=2024-02-09T03%3A22%3A10Z&sks=b&skv=2021-08-06&sig=rEWweoaNnDpMmRhuGCu/g5usScPbdpnNmensv/dlNbo%3D")}]} */
     let response = response["data"][0]["url"]
         .as_str()
         .unwrap_or("No response from DALL-E 3")
@@ -109,4 +111,20 @@ pub async fn imageprompt(
     let reply = poise::CreateReply::default().content("").embed(embed);
     ctx.send(reply).await?;
     Ok(())
+}
+
+fn prompt_help() -> String {
+    String::from("Prompt OpenAI GPT-4 Turbo to generate a response")
+}
+
+fn imageprompt_help() -> String {
+    String::from("Prompt OpenAI DALL-E 3 to generate an image")
+}
+
+async fn error_handler(error: poise::FrameworkError<'_, crate::Data, Error>) {
+    println!("Error in command 'prompt': {}", error);
+}
+
+async fn img_error_handler(error: poise::FrameworkError<'_, crate::Data, Error>) {
+    println!("Error in command 'imageprompt': {}", error);
 }
