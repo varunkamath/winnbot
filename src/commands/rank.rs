@@ -23,7 +23,6 @@ pub async fn rlrank(
 ) -> Result<(), Error> {
     println!("Getting Rocket League rank");
     ctx.defer_or_broadcast().await?;
-    // Check if user has registered their Rocket League account
     let db = sled::open("rl-usernames")?;
     let discord_id = ctx.author().id.to_string();
     let value = db.get(discord_id.clone())?;
@@ -214,9 +213,7 @@ pub async fn rlregister(
     #[description = "Rocket League username"] username: String,
     #[description = "Platform (epic, steam, psn, xbox)"] platform: Option<String>,
 ) -> Result<(), Error> {
-    // Permanent storage of Rocket League username and platform in a sled database (key-value store)
     let db = sled::open("rl-usernames")?;
-    // Check if user has already registered their Rocket League account
     let discord_id = ctx.author().id.to_string();
     let value = db.get(discord_id.clone())?;
     if let Some(value) = value {
@@ -258,7 +255,6 @@ pub async fn rlregister(
     category = "Rocket League"
 )]
 pub async fn rlaccount(ctx: Context<'_>) -> Result<(), Error> {
-    // Check if user has registered their Rocket League account
     let db = sled::open("rl-usernames")?;
     let discord_id = ctx.author().id.to_string();
     let value = db.get(discord_id)?;
@@ -270,6 +266,42 @@ pub async fn rlaccount(ctx: Context<'_>) -> Result<(), Error> {
         let platform = value[1];
         let embed = CreateEmbed::new()
             .title("Rocket League Account")
+            .field("Username", username, true)
+            .field("Platform", platform, true)
+            .color(0x00bfff);
+        let reply = { poise::CreateReply::default().content("").embed(embed) };
+        ctx.send(reply).await?;
+    } else {
+        let embed = CreateEmbed::new()
+            .title("Rocket League Account")
+            .description("You have not registered your Rocket League account")
+            .color(0x00bfff);
+        let reply = { poise::CreateReply::default().content("").embed(embed) };
+        ctx.send(reply).await?;
+    }
+    Ok(())
+}
+
+#[poise::command(
+    slash_command,
+    prefix_command,
+    aliases("rad"),
+    track_edits,
+    category = "Rocket League"
+)]
+pub async fn rldelete(ctx: Context<'_>) -> Result<(), Error> {
+    let db = sled::open("rl-usernames")?;
+    let discord_id = ctx.author().id.to_string();
+    let value = db.get(discord_id.clone())?;
+    if let Some(value) = value {
+        db.remove(discord_id)?;
+        let value = value.to_vec();
+        let value = String::from_utf8(value).unwrap();
+        let value: Vec<&str> = value.split("-").collect();
+        let username = value[0];
+        let platform = value[1];
+        let embed = CreateEmbed::new()
+            .title("Rocket League Account Deleted")
             .field("Username", username, true)
             .field("Platform", platform, true)
             .color(0x00bfff);
