@@ -6,6 +6,7 @@ services:
     image: ghcr.io/varunkamath/winnbot:main
     container_name: winn
     network_mode: host
+    # privileged: true
     platform: linux/amd64
     volumes:
       - .:/etc/winn/
