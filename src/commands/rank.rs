@@ -8,8 +8,10 @@ use serenity::builder::CreateEmbed;
 use std::env;
 use vsdbsled as sled;
 
+use crate::Data;
+
 type Error = Box<dyn std::error::Error + Send + Sync>;
-type Context<'a> = poise::Context<'a, crate::Data, Error>;
+type Context<'a> = poise::Context<'a, Data, Error>;
 
 static DB_URL: Lazy<String> = Lazy::new(|| {
     env::var("RANK_DB_URL").unwrap_or_else(|_| String::from("/etc/winn/rl-usernames"))
@@ -20,7 +22,9 @@ static DB_URL: Lazy<String> = Lazy::new(|| {
     prefix_command,
     aliases("r"),
     track_edits,
-    category = "Rocket League"
+    category = "Rocket League",
+    help_text_fn = "rlrank_help",
+    on_error = "error_handler"
 )]
 pub async fn rlrank(
     ctx: Context<'_>,
@@ -52,7 +56,6 @@ pub async fn rlrank(
             }
         }
     };
-    // If platform is not provided, default to epic
     let platform = platform.unwrap_or("epic".to_string());
     println!("Username: {}", username);
     println!("Platform: {}", platform);
@@ -113,8 +116,6 @@ pub async fn rlrank(
         }
     }
     let mut mmr_to_next_rank = 0;
-    // let mut next_rank = "";
-    // let mut next_division = "";
     for (i, rank) in std_ranks.iter().enumerate() {
         let (name, _, _, mmr, _) = rank;
         if **name == "Un-Ranked" {
@@ -173,8 +174,6 @@ pub async fn rlrank(
         for line in rank_mmrs.clone() {
             let rank_mmr: Vec<&str> = line.split(", ").collect();
             if *name == "Supersonic Legend" {
-                // next_rank = "N/A";
-                // next_division = "N/A";
                 mmr_to_next_rank = 0;
                 break;
             }
@@ -183,8 +182,6 @@ pub async fn rlrank(
                     rank_mmrs[rank_mmrs.iter().position(|&x| x == line).unwrap() + 1];
                 let next_rank_mmr: Vec<&str> = next_rank_mmr.split(", ").collect();
                 println!("{:?}", next_rank_mmr);
-                // next_rank = next_rank_mmr[0].split(" ").collect::<Vec<&str>>()[1];
-                // next_division = next_rank_mmr[0].split(" ").collect::<Vec<&str>>()[2];
                 mmr_to_next_rank = next_rank_mmr[1].split(" - ").collect::<Vec<&str>>()[0]
                     .parse::<u64>()
                     .unwrap()
@@ -213,7 +210,9 @@ pub async fn rlrank(
     prefix_command,
     aliases("rar"),
     track_edits,
-    category = "Rocket League"
+    category = "Rocket League",
+    help_text_fn = "rlregister_help",
+    on_error = "rlreg_error_handler"
 )]
 pub async fn rlregister(
     ctx: Context<'_>,
@@ -260,7 +259,9 @@ pub async fn rlregister(
     prefix_command,
     aliases("rac"),
     track_edits,
-    category = "Rocket League"
+    category = "Rocket League",
+    help_text_fn = "rlaccount_help",
+    on_error = "rlacc_error_handler"
 )]
 pub async fn rlaccount(ctx: Context<'_>) -> Result<(), Error> {
     let db_url = &*DB_URL;
@@ -296,7 +297,9 @@ pub async fn rlaccount(ctx: Context<'_>) -> Result<(), Error> {
     prefix_command,
     aliases("rad"),
     track_edits,
-    category = "Rocket League"
+    category = "Rocket League",
+    help_text_fn = "rldelete_help",
+    on_error = "rldelete_error_handler"
 )]
 pub async fn rldelete(ctx: Context<'_>) -> Result<(), Error> {
     let db_url = &*DB_URL;
@@ -326,4 +329,36 @@ pub async fn rldelete(ctx: Context<'_>) -> Result<(), Error> {
         ctx.send(reply).await?;
     }
     Ok(())
+}
+
+fn rlrank_help() -> String {
+    String::from("Get Rocket League rank. Example usage: /rlrank varunkamath")
+}
+
+fn rlregister_help() -> String {
+    String::from("Register your Rocket League account. Example usage: /rlregister varunkamath")
+}
+
+fn rlaccount_help() -> String {
+    String::from("Get your registered Rocket League account. Example usage: /rlaccount")
+}
+
+fn rldelete_help() -> String {
+    String::from("Delete your registered Rocket League account. Example usage: /rldelete")
+}
+
+async fn error_handler(error: poise::FrameworkError<'_, Data, Error>) {
+    println!("Error in command 'rlrank': {}", error);
+}
+
+async fn rlreg_error_handler(error: poise::FrameworkError<'_, Data, Error>) {
+    println!("Error in command 'rlregister': {}", error);
+}
+
+async fn rlacc_error_handler(error: poise::FrameworkError<'_, Data, Error>) {
+    println!("Error in command 'rlaccount': {}", error);
+}
+
+async fn rldelete_error_handler(error: poise::FrameworkError<'_, Data, Error>) {
+    println!("Error in command 'rldelete': {}", error);
 }

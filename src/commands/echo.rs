@@ -1,13 +1,18 @@
 // Desc: Echoes a message to the channel
 
+use crate::Data;
+
 type Error = Box<dyn std::error::Error + Send + Sync>;
-type Context<'a> = poise::Context<'a, crate::Data, Error>;
+type Context<'a> = poise::Context<'a, Data, Error>;
 
 #[poise::command(
     // context_menu_command = "Echo a message",
     slash_command,
     prefix_command,
-    aliases("c")
+    aliases("c"),
+    category = "Utility",
+    help_text_fn = "echo_help",
+    on_error = "error_handler"
 )]
 pub async fn echo(
     ctx: Context<'_>,
@@ -18,4 +23,12 @@ pub async fn echo(
     ctx.defer_ephemeral().await?;
     ctx.say(format!("Message echoed: \"{}\"", msg)).await?;
     Ok(())
+}
+
+fn echo_help() -> String {
+    String::from("Echo a message to the channel. Example usage: /echo Hello, world!")
+}
+
+fn error_handler(error: Error, ctx: Context<'_>) {
+    println!("Error in command 'echo': {}", error);
 }

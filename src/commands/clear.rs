@@ -3,15 +3,19 @@ use poise::serenity_prelude as serenity;
 use serenity::builder::{CreateEmbed, CreateMessage, GetMessages};
 use std::env;
 
+use crate::Data;
+
 type Error = Box<dyn std::error::Error + Send + Sync>;
-type Context<'a> = poise::Context<'a, crate::Data, Error>;
+type Context<'a> = poise::Context<'a, Data, Error>;
 
 #[poise::command(
     // context_menu_command = "Clear messages in a channel",
     slash_command,
     prefix_command,
     aliases("c"),
-    category = "Utility"
+    category = "Utility",
+    help_text_fn = "clear_help",
+    on_error = "error_handler"
 )]
 pub async fn clear(
     ctx: Context<'_>,
@@ -50,4 +54,12 @@ pub async fn clear(
         }
     }
     Ok(())
+}
+
+fn clear_help() -> String {
+    String::from("Clear messages from a channel. Example usage: /clear 5")
+}
+
+async fn error_handler(error: poise::FrameworkError<'_, Data, Error>) {
+    println!("Error in command 'clear': {}", error);
 }
