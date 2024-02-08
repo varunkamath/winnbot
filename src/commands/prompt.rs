@@ -13,7 +13,8 @@ type Context<'a> = poise::Context<'a, crate::Data, Error>;
     aliases("ai"),
     help_text_fn = "prompt_help",
     on_error = "error_handler",
-    category = "AI"
+    category = "AI",
+    context_menu_name = "Prompt GPT-4 Turbo"
 )]
 pub async fn prompt(
     ctx: Context<'_>,

@@ -29,6 +29,6 @@ fn echo_help() -> String {
     String::from("Echo a message to the channel. Example usage: /echo Hello, world!")
 }
 
-fn error_handler(error: Error, ctx: Context<'_>) {
+async fn error_handler(error: poise::FrameworkError<'_, Data, Error>) {
     println!("Error in command 'echo': {}", error);
 }
