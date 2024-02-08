@@ -34,6 +34,7 @@ pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
         }
         return Ok(());
     }
+    ctx.defer_or_broadcast().await?;
     let puzzle_player_id = ctx.author().id.to_string();
     let file_contents = include_str!("data/puzzles.csv");
     let lines = file_contents.lines().collect::<Vec<&str>>();
