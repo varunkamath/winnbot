@@ -9,6 +9,8 @@ use vsdbsled as sled;
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, crate::Data, Error>;
 
+static DB_URL: &str = "/etc/winn/rl-usernames";
+
 #[poise::command(
     slash_command,
     prefix_command,
@@ -23,7 +25,7 @@ pub async fn rlrank(
 ) -> Result<(), Error> {
     println!("Getting Rocket League rank");
     ctx.defer_or_broadcast().await?;
-    let db = sled::open("rl-usernames")?;
+    let db = sled::open(DB_URL)?;
     let discord_id = ctx.author().id.to_string();
     let value = db.get(discord_id.clone())?;
     let username = match username {
@@ -213,7 +215,7 @@ pub async fn rlregister(
     #[description = "Rocket League username"] username: String,
     #[description = "Platform (epic, steam, psn, xbox)"] platform: Option<String>,
 ) -> Result<(), Error> {
-    let db = sled::open("rl-usernames")?;
+    let db = sled::open(DB_URL)?;
     let discord_id = ctx.author().id.to_string();
     let value = db.get(discord_id.clone())?;
     if let Some(value) = value {
@@ -255,7 +257,7 @@ pub async fn rlregister(
     category = "Rocket League"
 )]
 pub async fn rlaccount(ctx: Context<'_>) -> Result<(), Error> {
-    let db = sled::open("rl-usernames")?;
+    let db = sled::open(DB_URL)?;
     let discord_id = ctx.author().id.to_string();
     let value = db.get(discord_id)?;
     if let Some(value) = value {
@@ -290,7 +292,7 @@ pub async fn rlaccount(ctx: Context<'_>) -> Result<(), Error> {
     category = "Rocket League"
 )]
 pub async fn rldelete(ctx: Context<'_>) -> Result<(), Error> {
-    let db = sled::open("rl-usernames")?;
+    let db = sled::open(DB_URL)?;
     let discord_id = ctx.author().id.to_string();
     let value = db.get(discord_id.clone())?;
     if let Some(value) = value {

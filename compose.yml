@@ -7,5 +7,7 @@ services:
     container_name: winn
     network_mode: host
     platform: linux/amd64
+    volumes:
+      - .:/etc/winn/
     env_file:
       - env_vars
