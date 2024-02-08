@@ -1,7 +1,7 @@
 // Desc: Play a random chess puzzle
 use image::GenericImageView;
 use pgnparse::parser::*;
-use poise::serenity_prelude as serenity;
+use poise::{reply, serenity_prelude as serenity};
 use rand::seq::SliceRandom;
 use reqwest::{get, Response};
 use serde_json::Value;
@@ -77,14 +77,6 @@ pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
     image.save("puzzle.png").unwrap();
     let attachment = CreateAttachment::path("puzzle.png").await?;
     let footer = CreateEmbedFooter::new(format!("Puzzle ID: {}", line));
-    // let embed = CreateEmbed::new()
-    //     .title("Puzzle")
-    //     .footer(footer)
-    //     .description(format!(
-    //         "{} to move. Input a move in UCI format (example: b4b5, d7e8, etc.)\n\n[lichess](https://lichess.com/training/{})",
-    //         whose_turn, line
-    //     ))
-    //     .attachment("puzzle.png");
     let reply = {
         let embed = CreateEmbed::new()
         .title("Puzzle")
@@ -101,13 +93,6 @@ pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
         // .components(components)
     };
     ctx.send(reply).await?;
-    // let reply = CreateReply::to_prefix(self, invocation_message) //::new().embed(embed);
-    // let builder = CreateMessage::new().content("").tts(false).embed(embed);
-    // ctx.send(CreateMessage::new().content("").tts(false).embed(embed));
-    // let _ = ctx
-    //     .channel_id()
-    //     .send_files(ctx.http(), attachment, builder)
-    //     .await?;
     let board = shakmaty::Board::from_ascii_board_fen(board_fen.as_bytes()).unwrap();
     println!("{:?}", board.occupied());
     let mut setup = Setup::empty();
@@ -292,14 +277,17 @@ pub async fn solution(ctx: Context<'_>) -> Result<(), Error> {
     let file_path = std::path::Path::new("puzzle.png");
     if file_path.exists() {
         println!("Sending solution");
+        ctx.defer_or_broadcast().await?;
         let solution = std::env::var("SOLUTION").unwrap();
         let puzzle_id = std::env::var("PUZZLE_ID").unwrap();
         let embed = CreateEmbed::new().title("Solution").description(format!(
             "Solution: {}\n\n[lichess](https://lichess.org/training/{})",
             solution, puzzle_id
         ));
-        let builder = CreateMessage::new().content("").tts(false).embed(embed);
-        let _ = ctx.channel_id().send_message(ctx.http(), builder).await;
+        let reply = { poise::CreateReply::default().content("").embed(embed) };
+        ctx.send(reply).await?;
+        // let builder = CreateMessage::new().content("").tts(false).embed(embed);
+        // let _ = ctx.channel_id().send_message(ctx.http(), builder).await;
         std::fs::remove_file("puzzle.png").unwrap();
         std::env::set_var("PUZZLE_ID", "");
         std::env::set_var("SOLUTION", "");
