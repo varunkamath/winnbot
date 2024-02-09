@@ -76,7 +76,7 @@ async fn event_handler(
 }
 
 #[poise::command(prefix_command)]
-async fn register(ctx: Context<'_>) -> Result<(), Error> {
+async fn slash_register(ctx: Context<'_>) -> Result<(), Error> {
     poise::builtins::register_application_commands_buttons(ctx).await?;
     Ok(())
 }
@@ -115,7 +115,7 @@ async fn main() {
                 rank::rldelete(),
                 prompt::prompt(),
                 prompt::imageprompt(),
-                register(),
+                slash_register(),
                 // unknown::unknown,
             ],
             prefix_options: poise::PrefixFrameworkOptions {
