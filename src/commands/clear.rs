@@ -15,6 +15,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
     category = "Utility",
     help_text_fn = "clear_help",
     on_error = "error_handler",
+    ephemeral,
     owners_only
 )]
 pub async fn clear(
