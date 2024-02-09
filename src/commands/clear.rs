@@ -36,8 +36,10 @@ pub async fn clear(
         .await
         .unwrap();
     println!("{} messages deleted", num_messages);
-    ctx.say(format!("{} messages deleted", num_messages))
-        .await?;
+    if ctx.prefix() == "/" {
+        ctx.say(format!("{} messages deleted", num_messages))
+            .await?;
+    }
     Ok(())
 }
 
