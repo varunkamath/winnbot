@@ -23,7 +23,7 @@ pub async fn clear(
     #[description = "Number of messages to clear"] num_messages: Option<u8>,
 ) -> Result<(), Error> {
     println!("Clearing messages");
-    ctx.defer_or_broadcast().await?;
+    ctx.defer_ephemeral().await?;
     let num_messages = num_messages.unwrap_or(1);
     let channel_id = ctx.channel_id();
     let builder = GetMessages::new().before(ctx.id()).limit(num_messages);
@@ -36,7 +36,6 @@ pub async fn clear(
         .await
         .unwrap();
     println!("{} messages deleted", num_messages);
-    ctx.defer_ephemeral().await?;
     ctx.say(format!("{} messages deleted", num_messages))
         .await?;
     Ok(())
