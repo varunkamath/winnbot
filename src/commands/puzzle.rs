@@ -15,8 +15,8 @@ use crate::Data;
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
+/// Play a random chess puzzle
 #[poise::command(
-    // context_menu_command = "Play a random chess puzzle",
     slash_command,
     prefix_command,
     aliases("p"),
@@ -95,7 +95,6 @@ pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
             .content("")
             .embed(embed)
             .attachment(attachment)
-        // .components(components)
     };
     ctx.send(reply).await?;
     let board = shakmaty::Board::from_ascii_board_fen(board_fen.as_bytes()).unwrap();
@@ -135,7 +134,6 @@ pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
     let original_solution = solution.clone();
     let mut solution = solution.split(' ').collect::<Vec<&str>>();
     let mut next_move = solution[0];
-    // let time = std::time::Instant::now();
     let time = tokio::time::Instant::now();
     println!("Solution: {}", solution.join(" "));
     std::env::set_var("SOLUTION", solution.join(" "));
@@ -156,10 +154,6 @@ pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
                 // .attachment(attachment)
             };
             ctx.send(reply).await?;
-            // let builder = CreateMessage::new().content("").tts(false).embed(embed);
-            // if let Err(why) = ctx.channel_id().send_message(ctx.http(), builder).await {
-            //     println!("Error sending message: {:?}", why);
-            // }
             timeout = true;
             continue;
         }
@@ -198,14 +192,6 @@ pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
                         .attachment(attachment)
                 };
                 ctx.send(reply).await?;
-                // let builder = CreateMessage::new().content("").tts(false).embed(embed);
-                // if let Err(why) = ctx
-                //     .channel_id()
-                //     .send_files(ctx.http(), attachment, builder)
-                //     .await
-                // {
-                //     println!("Error sending message: {:?}", why);
-                // }
             } else {
                 println!("Solution before opponent move: {}", solution.join(" "));
                 println!("Your move: {}", next_move);
@@ -277,6 +263,7 @@ pub async fn puzzle(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Get the solution to the current puzzle
 #[poise::command(
     slash_command,
     prefix_command,

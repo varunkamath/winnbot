@@ -17,6 +17,7 @@ static DB_URL: Lazy<String> = Lazy::new(|| {
     env::var("RANK_DB_URL").unwrap_or_else(|_| String::from("/etc/winn/rl-usernames"))
 });
 
+/// Get Rocket League rank
 #[poise::command(
     slash_command,
     prefix_command,
@@ -205,6 +206,7 @@ pub async fn rlrank(
     Ok(())
 }
 
+/// Register your Rocket League account to your Discord ID
 #[poise::command(
     slash_command,
     prefix_command,
@@ -254,6 +256,7 @@ pub async fn rlregister(
     Ok(())
 }
 
+/// Get your registered Rocket League account
 #[poise::command(
     slash_command,
     prefix_command,
@@ -292,6 +295,7 @@ pub async fn rlaccount(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Delete your registered Rocket League account
 #[poise::command(
     slash_command,
     prefix_command,

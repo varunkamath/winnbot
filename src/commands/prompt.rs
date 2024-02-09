@@ -1,4 +1,4 @@
-// Desc: Prompt OpenAI GPT-4 Turbo to generate a response
+// Desc: Prompt OpenAI to generate a response
 use poise::serenity_prelude as serenity;
 use reqwest::Client;
 use serenity::builder::CreateEmbed;
@@ -7,6 +7,7 @@ use std::env;
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, crate::Data, Error>;
 
+/// Prompt OpenAI GPT-4 Turbo to generate a response
 #[poise::command(
     slash_command,
     prefix_command,
@@ -14,26 +15,14 @@ type Context<'a> = poise::Context<'a, crate::Data, Error>;
     help_text_fn = "prompt_help",
     on_error = "error_handler",
     category = "AI",
-    // context_menu_name = "Prompt GPT-4 Turbo"
+    owners_only
 )]
 pub async fn prompt(
     ctx: Context<'_>,
     #[description = "Prompt to send to GPT-4 Turbo"] prompt: String,
 ) -> Result<(), Error> {
-    let user_id = env::var("USER_ID");
-    if let Some(user_id) = user_id.ok() {
-        if ctx.author().id != user_id.parse::<u64>().unwrap() {
-            println!("User is not authorized!");
-            let embed = CreateEmbed::new()
-                .title("⚠️ Unauthorized")
-                .description("You are not authorized to use this command");
-            let reply = poise::CreateReply::default().content("").embed(embed);
-            ctx.send(reply).await?;
-            return Ok(());
-        }
-    }
-    ctx.defer_or_broadcast().await?;
     println!("Sending prompt to GPT-4 Turbo");
+    ctx.defer_or_broadcast().await?;
     let api_key = env::var("OPENAI_API_KEY")?;
     let client = Client::new();
     let response = client
@@ -60,32 +49,22 @@ pub async fn prompt(
     Ok(())
 }
 
+/// Prompt OpenAI DALL-E 3 to generate an image
 #[poise::command(
     slash_command,
     prefix_command,
     aliases("aiim"),
     help_text_fn = "imageprompt_help",
     on_error = "img_error_handler",
-    category = "AI"
+    category = "AI",
+    owners_only
 )]
 pub async fn imageprompt(
     ctx: Context<'_>,
     #[description = "Prompt to send to DALL-E 3"] prompt: String,
 ) -> Result<(), Error> {
-    let user_id = env::var("USER_ID");
-    if let Some(user_id) = user_id.ok() {
-        if ctx.author().id != user_id.parse::<u64>().unwrap() {
-            println!("User is not authorized!");
-            let embed = CreateEmbed::new()
-                .title("⚠️ Unauthorized")
-                .description("You are not authorized to use this command");
-            let reply = poise::CreateReply::default().content("").embed(embed);
-            ctx.send(reply).await?;
-            return Ok(());
-        }
-    }
-    ctx.defer_or_broadcast().await?;
     println!("Sending prompt to DALL-E 3");
+    ctx.defer_or_broadcast().await?;
     let api_key = env::var("OPENAI_API_KEY")?;
     let client = Client::new();
     let response = client

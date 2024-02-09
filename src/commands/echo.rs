@@ -5,8 +5,8 @@ use crate::Data;
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
+/// Echo a provided message to the current channel
 #[poise::command(
-    // context_menu_command = "Echo a message",
     slash_command,
     prefix_command,
     aliases("c"),

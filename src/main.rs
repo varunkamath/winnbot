@@ -106,6 +106,7 @@ async fn main() {
                 count::count(),
                 echo::echo(),
                 help::help(),
+                help::source(),
                 puzzle::puzzle(),
                 puzzle::solution(),
                 rank::rlrank(),
