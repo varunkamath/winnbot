@@ -12,3 +12,34 @@ services:
       - .:/etc/winn/
     env_file:
       - env_vars
+
+  app:
+    image: proxy_scraper_checker
+    platform: linux/amd64
+    build:
+      context: .
+      args:
+        - GID=${GID:-1000}
+        - UID=${UID:-1000}
+    tty: true
+    volumes:
+      - proxy_scraper_checker_cache:/home/app/.cache/proxy_scraper_checker
+      - ./src/commands/data/prox:/home/app/.local/share/proxy_scraper_checker
+      - type: bind
+        source: ./config.toml
+        target: /app/config.toml
+      # - ./config.toml:/app/config.toml
+
+  restarter:
+    image: docker
+    platform: linux/amd64
+    volumes: [ "/var/run/docker.sock:/var/run/docker.sock" ]
+    command:
+      [
+        "/bin/sh",
+        "-c",
+        "while true; do sleep 1200; docker restart proxy-scraper-checker-main-app-1; done"
+      ]
+    restart: unless-stopped
+volumes:
+  proxy_scraper_checker_cache:

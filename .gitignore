@@ -20,3 +20,7 @@ env_vars
 # macOS garbage, large data files
 .DS_Store
 *.db
+config.toml
+
+# Testing database
+rl-usernames/

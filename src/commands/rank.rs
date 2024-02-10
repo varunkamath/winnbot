@@ -61,6 +61,11 @@ pub async fn rlrank(
     println!("Username: {}", username);
     println!("Platform: {}", platform);
     let py_script = include_str!("./get_rank.py");
+    // Load prox file at runtime
+    let prox_file_path = env::var("PROX_FILE").unwrap_or_else(|_| {
+        String::from("/etc/winn/src/commands/data/prox/proxies_anonymous/http.txt")
+    });
+    println!("Prox file: {}", prox_file_path);
     let mut py_resp: String = "".to_string();
     Python::with_gil(|py| -> PyResult<()> {
         let fun: Py<PyAny> = PyModule::from_code(py, py_script, "rank.py", "rank")
@@ -68,7 +73,7 @@ pub async fn rlrank(
             .getattr("get_rank")
             .unwrap()
             .into();
-        let args = PyTuple::new(py, &[username.clone(), platform]);
+        let args = PyTuple::new(py, &[username.clone(), platform, prox_file_path]);
         py_resp = fun.call1(py, args).unwrap().to_string();
         Ok(())
     })
