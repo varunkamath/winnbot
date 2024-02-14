@@ -127,7 +127,9 @@ async fn main() {
         .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                ctx.set_activity(Some(serenity::ActivityData::watching("for /help")));
+                ctx.set_activity(Some(serenity::ActivityData::custom(
+                    "<a:ashuu:727305286112641045> Avoiding runtime errors...",
+                )));
                 Ok(Data {
                     list_data,
                     mudae_id,
