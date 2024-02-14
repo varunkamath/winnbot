@@ -61,7 +61,6 @@ pub async fn rlrank(
     println!("Username: {}", username);
     println!("Platform: {}", platform);
     let py_script = include_str!("./get_rank.py");
-    // Load prox file at runtime
     let prox_file_path = env::var("PROX_FILE").unwrap_or_else(|_| {
         String::from("/etc/winn/src/commands/data/prox/proxies_anonymous/http.txt")
     });
@@ -101,7 +100,6 @@ pub async fn rlrank(
     }
     let mut highest_mmr = 0;
     let mut highest_mmr_index = 0;
-
     let new_ranks = &ranks;
     for rank in new_ranks {
         println!("{:?}", rank);
