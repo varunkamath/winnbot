@@ -120,6 +120,17 @@ async fn main() {
             ],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".into()),
+                additional_prefixes: vec![
+                    poise::Prefix::Literal("🐱 "),
+                    poise::Prefix::Literal("🐱"),
+                    poise::Prefix::Literal("<:varunhappy:823224950738911242> "),
+                    poise::Prefix::Literal("<:varunhappy:823224950738911242>"),
+                    poise::Prefix::Regex(
+                        "(yo|hey) (kitten|winn|winny),? can you (please |pwease )?"
+                            .parse()
+                            .unwrap(),
+                    ),
+                ],
                 ..Default::default()
             },
             ..Default::default()

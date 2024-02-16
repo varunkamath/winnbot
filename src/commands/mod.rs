@@ -6,4 +6,4 @@ pub mod prompt;
 pub mod puzzle;
 pub mod rank;
 pub mod unknown;
-pub mod fractal;
+// pub mod fractal;

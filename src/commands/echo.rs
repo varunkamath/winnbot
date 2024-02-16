@@ -21,7 +21,10 @@ pub async fn echo(
     println!("Echoing message to channel");
     ctx.channel_id().say(ctx.http(), msg.clone()).await?;
     ctx.defer_ephemeral().await?;
-    ctx.say(format!("Message echoed: \"{}\"", msg)).await?;
+    // If command is prefix command, don't say anything
+    if ctx.prefix() == "/" {
+        ctx.say(format!("Message echoed: \"{}\"", msg)).await?;
+    }
     Ok(())
 }
 
